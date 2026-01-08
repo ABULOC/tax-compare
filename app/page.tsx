@@ -3,7 +3,6 @@ import Link from "next/link";
 export default function Home() {
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-10">
-      {/* Hero */}
       <header className="space-y-4">
         <h1 className="text-3xl font-bold">
           State Tax Comparison Calculator
@@ -17,62 +16,47 @@ export default function Home() {
           over time if invested.
         </p>
 
-<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
-  <Link
-    href="/compare"
-    className="inline-block rounded bg-black px-5 py-3 text-white text-center"
-  >
-    State tax calculator
-  </Link>
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <Link
+            href="/compare"
+            className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
+          >
+            State tax calculator
+          </Link>
 
-  <Link
-    href="/social-security"
-    className="inline-block rounded bg-gray-100 px-5 py-3 text-gray-900 text-center hover:bg-gray-200"
-  >
-    Social Security calculator
-  </Link>
-</div>
+          <Link
+            href="/social-security"
+            className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
+          >
+            Social Security calculator
+          </Link>
+        </div>
 
-
-
-
-
-          <div className="mt-3 text-sm text-gray-700">
-            <div className="font-medium text-gray-900">
-              Popular comparisons
-            </div>
-
-            <ul className="mt-2 list-disc pl-5 space-y-1">
-              <li>
-                <Link
-                  href="/compare"
-                  className="underline"
-                >
-                  California vs Texas tax comparison
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/compare"
-                  className="underline"
-                >
-                  New York vs Florida tax comparison
-                </Link>
-              </li>
-              <li>
-                <Link
-                  href="/compare"
-                  className="underline"
-                >
-                  Illinois vs Tennessee tax comparison
-                </Link>
-              </li>
-            </ul>
+        <div className="text-sm text-gray-700">
+          <div className="font-medium text-gray-900">
+            Popular comparisons
           </div>
+
+          <ul className="mt-2 list-disc pl-5 space-y-1">
+            <li>
+              <Link href="/compare" className="underline">
+                California vs Texas tax comparison
+              </Link>
+            </li>
+            <li>
+              <Link href="/compare" className="underline">
+                New York vs Florida tax comparison
+              </Link>
+            </li>
+            <li>
+              <Link href="/compare" className="underline">
+                Illinois vs Tennessee tax comparison
+              </Link>
+            </li>
+          </ul>
         </div>
       </header>
 
-      {/* What it includes */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">
           What this calculator includes
@@ -88,16 +72,11 @@ export default function Home() {
             Household)
           </li>
           <li>Estimated state standard deductions where applicable</li>
-          <li>
-            Property tax estimates using average effective rates by state
-          </li>
-          <li>
-            Annual tax difference and a long-term compounding illustration
-          </li>
+          <li>Property tax estimates using average effective rates by state</li>
+          <li>Annual tax difference and a long-term compounding illustration</li>
         </ul>
       </section>
 
-      {/* No income tax section */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">
           States with no state income tax
@@ -124,7 +103,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Why it matters */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">
           Why state tax differences matter
@@ -138,7 +116,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* FAQ */}
       <section className="space-y-4">
         <h2 className="text-xl font-semibold">
           Frequently asked questions
@@ -176,7 +153,6 @@ export default function Home() {
         </div>
       </section>
 
-      {/* About */}
       <section className="space-y-3">
         <h2 className="text-xl font-semibold">
           About this project
@@ -190,7 +166,6 @@ export default function Home() {
         </p>
       </section>
 
-      {/* Disclaimer */}
       <section className="border-t pt-6">
         <p className="text-sm text-gray-600">
           Estimates are for comparison purposes only and are not tax or
