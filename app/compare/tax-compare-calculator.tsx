@@ -1462,33 +1462,19 @@ const yAxisMax = useMemo(() => {
   return (
     <section className="space-y-4">
       <div className="space-y-4">
-<label className="block">
-  <div className="font-medium">Years Invested</div>
-  <input
-    className="mt-1 w-full rounded border px-3 py-2"
-    type="number"
-    min={1}
-    max={50}
-    value={yearsInput}
-    onChange={(e) => {
-      const v = e.target.value;
-      setYearsInput(v);
-
-      if (v === "") return;
-
-      const n = Number(v);
-      if (Number.isNaN(n)) return;
-
-      setYears(Math.max(1, Math.min(50, Math.floor(n))));
-    }}
-    onBlur={() => {
-      if (yearsInput === "") {
-        setYearsInput(String(years));
-      }
-    }}
-  />
-</label>
-
+        <label className="block">
+          <div className="font-medium">Income</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="text"
+            inputMode="numeric"
+            value={`$${formatNumberInput(income)}`}
+            onChange={(e) => {
+              const n = parseNumberInput(e.target.value);
+              setIncome(n);
+            }}
+          />
+        </label>
 
         <label className="block">
           <div className="font-medium">Home value</div>
