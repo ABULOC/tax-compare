@@ -4,13 +4,13 @@ export default function SocialSecurityPage() {
   return (
     <main className="max-w-3xl mx-auto p-6 space-y-6">
       <h1 className="text-3xl font-bold">
-        Social Security Contributions Calculator
+        Social Security Value Calculator
       </h1>
 
       <p className="text-gray-700">
         Estimate how much you and your employer pay into Social Security based
-        on your income and years worked, and see what those contributions could
-        grow to if invested at a 10% annual return.
+        on your income and years worked, and see what those contributions would
+        have grown to if invested instead at a 10% annual return.
       </p>
 
       <SocialSecurityCalculator />
