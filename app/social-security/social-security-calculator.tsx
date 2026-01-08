@@ -245,6 +245,39 @@ type Props = {
   initialStartYear?: number;
 };
 
+
+
+
+function CustomBalanceTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{ name?: string; value?: number }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const balance = payload[0]?.value ?? 0;
+
+  return (
+    <div className="rounded-md border bg-white shadow-lg px-4 py-3 min-w-[220px]">
+      <div className="text-sm text-gray-600">{`Year ${label}`}</div>
+      <div className="my-2 h-px bg-gray-200" />
+      <div className="flex items-baseline justify-between">
+        <div className="font-semibold text-gray-900">Balance</div>
+        <div className="font-semibold text-gray-900">{formatUSD(balance)}</div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
+
 export default function SocialSecurityCalculator(props: Props) {
   const [income, setIncome] = useState(props.initialIncome ?? 100_000);
 
@@ -376,6 +409,85 @@ export default function SocialSecurityCalculator(props: Props) {
     return points;
   }, [income, monthlyReturn, workingYears.start, workingYears.years]);
 
+
+
+
+
+  const withdrawalSeries = useMemo(() => {
+  const y = workingYears.years;
+  const start = workingYears.start;
+
+  const startYearCalendar = new Date().getFullYear();
+
+  let balance = 0;
+  let totalWithdrawn = 0;
+
+  const points: { year: number; balance: number }[] = [
+    { year: startYearCalendar, balance: 0 },
+  ];
+
+  // Phase 1: working years (contribute monthly, compound monthly)
+  for (let i = 0; i < y; i += 1) {
+    const workYear = start + i;
+    const cap = getWageBaseForYear(workYear);
+    const taxableWages = Math.min(income, cap);
+
+    const annualEmployee = taxableWages * EMPLOYEE_RATE;
+    const annualEmployer = taxableWages * EMPLOYER_RATE;
+    const annualTotal = annualEmployee + annualEmployer;
+
+    const monthlyContribution = annualTotal / 12;
+
+    for (let m = 1; m <= 12; m += 1) {
+      balance = balance * (1 + monthlyReturn) + monthlyContribution;
+    }
+
+    points.push({ year: startYearCalendar + i + 1, balance });
+  }
+
+  // Phase 2: retirement years (withdraw monthly SS benefit, compound monthly)
+  const monthlyWithdrawal = Math.max(0, benefitEstimate.piaMonthlyAt67);
+  const monthsRetirement = Math.max(
+    0,
+    Math.round(benefitEstimate.expectedYearsPaid * 12)
+  );
+
+  for (let m = 1; m <= monthsRetirement; m += 1) {
+    // Grow first
+    balance = balance * (1 + monthlyReturn);
+
+    // Withdraw, but do not go below zero
+    const actualWithdrawal = Math.min(monthlyWithdrawal, balance);
+    balance -= actualWithdrawal;
+    totalWithdrawn += actualWithdrawal;
+
+    // Record yearly points
+    if (m % 12 === 0) {
+      const yearOffset = m / 12;
+      points.push({ year: startYearCalendar + y + yearOffset, balance });
+    }
+  }
+
+  return {
+    points,
+    totalWithdrawn,
+    endingBalance: balance,
+    totalYears: y + monthsRetirement / 12,
+  };
+}, [
+  income,
+  monthlyReturn,
+  workingYears.start,
+  workingYears.years,
+  benefitEstimate.piaMonthlyAt67,
+  benefitEstimate.expectedYearsPaid,
+]);
+
+
+
+
+
+
   const xTicks = useMemo(() => {
     const first = investmentSeries[0]?.year;
     const last = investmentSeries[investmentSeries.length - 1]?.year;
@@ -389,6 +501,27 @@ export default function SocialSecurityCalculator(props: Props) {
     const max = Math.max(...investmentSeries.map((p) => p.balance));
     return max * 1.1;
   }, [investmentSeries]);
+
+
+
+
+  const withdrawalXTicks = useMemo(() => {
+  const first = withdrawalSeries.points[0]?.year;
+  const last = withdrawalSeries.points[withdrawalSeries.points.length - 1]?.year;
+  if (first == null || last == null) return [];
+
+  const mid = first + Math.floor((last - first) / 2);
+  return [first, mid, last];
+}, [withdrawalSeries.points]);
+
+const withdrawalYAxisMax = useMemo(() => {
+  const max = Math.max(...withdrawalSeries.points.map((p) => p.balance));
+  return max * 1.1;
+}, [withdrawalSeries.points]);
+
+
+
+
 
   const ending = investmentSeries[investmentSeries.length - 1];
   const endingBalance = ending?.balance ?? 0;
@@ -408,7 +541,7 @@ export default function SocialSecurityCalculator(props: Props) {
     <section className="space-y-6">
       <div className="space-y-4">
         <label className="block">
-  <div className="font-medium">Annual income</div>
+  <div className="font-medium">Average annual income</div>
   <input
     className="mt-1 w-full rounded border px-3 py-2"
     type="text"
@@ -552,8 +685,7 @@ onBlur={() => {
         {formatUSD(benefitEstimate.totalLifetime)}
       </div>
       <div className="mt-1 text-xs text-gray-600">
-        Assumes {benefitEstimate.expectedYearsPaid.toFixed(1)} years of payments
-        after age 67 (simple average).
+        Assumes you begin taking payments at 67 and live to be 84.
       </div>
     </div>
   </div>
@@ -650,6 +782,95 @@ onBlur={() => {
             OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
             assumption. Results are illustrative only and not financial advice.
           </p>
+
+<div className="pt-6 border-t space-y-3">
+  <h3 className="text-lg font-semibold">
+    If Social Security payments were withdrawn monthly from that investment
+  </h3>
+
+  <div className="text-center">
+    <div className="text-sm text-gray-600">
+      Projection through {totals.y} working years plus{" "}
+      {benefitEstimate.expectedYearsPaid.toFixed(1)} years of retirement
+      withdrawals
+    </div>
+
+    <div className="mt-1 text-sm text-gray-700">
+      Monthly withdrawal assumed:{" "}
+      <span className="font-semibold">
+        {formatUSD(benefitEstimate.piaMonthlyAt67)}
+      </span>
+      {" · "}
+      Total withdrawn:{" "}
+      <span className="font-semibold">
+        {formatUSD(withdrawalSeries.totalWithdrawn)}
+      </span>
+      {" · "}
+      Ending balance:{" "}
+      <span className="font-semibold">
+        {formatUSD(withdrawalSeries.endingBalance)}
+      </span>
+    </div>
+  </div>
+
+  <div className="w-full max-w-2xl aspect-[6/5] mx-auto">
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart
+        data={withdrawalSeries.points}
+        margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+      >
+        <defs>
+          <linearGradient id="withdrawalBalanceFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopOpacity={0.25} />
+            <stop offset="100%" stopOpacity={0.03} />
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+        <XAxis
+          dataKey="year"
+          ticks={withdrawalXTicks}
+          interval={0}
+          tickFormatter={(v) => {
+            const first = withdrawalXTicks[0];
+            if (first != null && Number(v) === first) return "Now";
+            return String(v);
+          }}
+          label={{ value: "Year", position: "insideBottom", offset: -5 }}
+        />
+
+        <YAxis
+          domain={[0, withdrawalYAxisMax]}
+          tickFormatter={(v) => formatYAxisTick(Number(v))}
+        />
+
+        <Tooltip content={<CustomBalanceTooltip />} />
+
+        <Legend verticalAlign="bottom" align="right" iconType="square" />
+
+        <Area
+          type="monotone"
+          dataKey="balance"
+          name="Account balance"
+          stroke="#111827"
+          fill="url(#withdrawalBalanceFill)"
+          dot={false}
+          activeDot={false}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+
+  <p className="text-xs text-gray-600">
+    This projection assumes contributions are invested during working years, then
+    an amount equal to the estimated Social Security monthly benefit is withdrawn
+    every month during retirement while the remaining balance continues to
+    compound monthly at 10%. Results are illustrative only.
+  </p>
+</div>
+
+
         </div>
       </div>
     </section>
