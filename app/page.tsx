@@ -18,20 +18,22 @@ export default function Home() {
         </p>
 
         <div className="pt-1">
-          <Link
-            href="/compare"
-            className="inline-block rounded bg-black px-5 py-3 text-white"
-          >
-            Compare state taxes
-          </Link>
+<div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+  <Link
+    href="/compare"
+    className="inline-block rounded bg-black px-5 py-3 text-white text-center"
+  >
+    Compare state taxes
+  </Link>
 
-          <div className="mt-3 text-sm text-gray-700">
-  Also explore:
-  {" "}
-  <Link href="/social-security" className="underline">
-    Social Security contributions calculator
+  <Link
+    href="/social-security"
+    className="inline-block rounded border border-gray-300 px-5 py-3 text-gray-900 text-center hover:bg-gray-50"
+  >
+    Social Security calculator
   </Link>
 </div>
+
 
 
           <div className="mt-3 text-sm text-gray-700">
