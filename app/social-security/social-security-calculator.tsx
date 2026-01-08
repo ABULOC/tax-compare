@@ -13,16 +13,51 @@ import {
 } from "recharts";
 
 /**
- * Social Security OASDI Contribution and Benefit Base (taxable maximum)
- * Source: SSA OACT (1937–2026)
+ * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
+ * Source: SSA OACT (Contribution and Benefit Base, 1937–2026). :contentReference[oaicite:1]{index=1}
  */
 const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   1937: 3_000,
+  1938: 3_000,
+  1939: 3_000,
+  1940: 3_000,
+  1941: 3_000,
+  1942: 3_000,
+  1943: 3_000,
+  1944: 3_000,
+  1945: 3_000,
+  1946: 3_000,
+  1947: 3_000,
+  1948: 3_000,
+  1949: 3_000,
+  1950: 3_000,
+
   1951: 3_600,
+  1952: 3_600,
+  1953: 3_600,
+  1954: 3_600,
+
   1955: 4_200,
+  1956: 4_200,
+  1957: 4_200,
+  1958: 4_200,
+
   1959: 4_800,
+  1960: 4_800,
+  1961: 4_800,
+  1962: 4_800,
+  1963: 4_800,
+  1964: 4_800,
+  1965: 4_800,
+
   1966: 6_600,
+  1967: 6_600,
+
   1968: 7_800,
+  1969: 7_800,
+  1970: 7_800,
+  1971: 7_800,
+
   1972: 9_000,
   1973: 10_800,
   1974: 13_200,
@@ -61,10 +96,13 @@ const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   2007: 97_500,
   2008: 102_000,
   2009: 106_800,
+  2010: 106_800,
+  2011: 106_800,
   2012: 110_100,
   2013: 113_700,
   2014: 117_000,
   2015: 118_500,
+  2016: 118_500,
   2017: 127_200,
   2018: 128_400,
   2019: 132_900,
@@ -77,30 +115,14 @@ const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   2026: 184_500,
 };
 
+const MIN_WAGE_BASE_YEAR = Math.min(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number));
+const MAX_WAGE_BASE_YEAR = Math.max(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number));
+
+// Social Security OASDI wage rate
+// Employee: 6.2%
+// Employer: 6.2%
 const EMPLOYEE_RATE = 0.062;
 const EMPLOYER_RATE = 0.062;
-
-const PIA_BEND_1 = 1_286;
-const PIA_BEND_2 = 7_749;
-
-// Average remaining life expectancy at age 67 (men + women)
-const AVG_REMAINING_YEARS_AT_67 = (16.11 + 18.56) / 2;
-
-function getWageBaseForYear(year: number) {
-  const years = Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number).sort();
-  for (let i = years.length - 1; i >= 0; i -= 1) {
-    if (year >= years[i]) return OASDI_WAGE_BASE_BY_YEAR[years[i]];
-  }
-  return OASDI_WAGE_BASE_BY_YEAR[years[0]];
-}
-
-function calcPIAFromAIME(aime: number) {
-  return (
-    Math.min(aime, PIA_BEND_1) * 0.9 +
-    Math.max(0, Math.min(aime, PIA_BEND_2) - PIA_BEND_1) * 0.32 +
-    Math.max(0, aime - PIA_BEND_2) * 0.15
-  );
-}
 
 function formatUSD(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -110,89 +132,234 @@ function formatUSD(n: number) {
   }).format(n);
 }
 
-function formatYAxisTick(v: number) {
-  if (v < 1_000) return `$${v}`;
-  if (v < 1_000_000) return `$${Math.round(v / 1_000)}k`;
-  return `$${(v / 1_000_000).toFixed(1)}m`;
+function formatNumberInput(n: number) {
+  return n.toLocaleString("en-US");
 }
 
-function CustomBalanceTooltip({ active, label, payload }: any) {
-  if (!active || !payload?.length) return null;
+function parseNumberInput(value: string) {
+  return Number(value.replace(/[^0-9]/g, ""));
+}
+
+function formatYAxisTick(v: number) {
+  if (!Number.isFinite(v)) return "";
+  const n = Number(v);
+
+  if (n === 0) return "$0";
+
+  if (n < 1_000_000) {
+    const k = Math.round(n / 1_000);
+    return `$${k}k`;
+  }
+
+  const m = n / 1_000_000;
+  const str = m < 10 ? m.toFixed(1) : Math.round(m).toString();
+  const cleaned = str.endsWith(".0") ? str.slice(0, -2) : str;
+
+  return `$${cleaned}mm`;
+}
+
+function getWageBaseForYear(year: number) {
+  if (OASDI_WAGE_BASE_BY_YEAR[year] != null) return OASDI_WAGE_BASE_BY_YEAR[year];
+  if (year < MIN_WAGE_BASE_YEAR) return OASDI_WAGE_BASE_BY_YEAR[MIN_WAGE_BASE_YEAR];
+  return OASDI_WAGE_BASE_BY_YEAR[MAX_WAGE_BASE_YEAR];
+}
+
+function CustomSSInvestmentTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{ name?: string; value?: number; color?: string }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const principal = payload.find((p) => p.name === "Total principal")?.value ?? 0;
+  const interest = payload.find((p) => p.name === "Total interest")?.value ?? 0;
+  const balance = principal + interest;
+
+  const principalColor =
+    payload.find((p) => p.name === "Total principal")?.color ?? "#1D4ED8";
+  const interestColor =
+    payload.find((p) => p.name === "Total interest")?.color ?? "#047857";
+
   return (
-    <div className="rounded-md border bg-white px-4 py-3 shadow">
-      <div className="text-sm text-gray-600">Year {label}</div>
-      <div className="font-semibold">{formatUSD(payload[0].value)}</div>
+    <div className="rounded-md border bg-white shadow-lg px-4 py-3 min-w-[260px]">
+      <div className="text-sm text-gray-600">{String(label)}</div>
+
+      <div className="my-3 h-px bg-gray-200" />
+
+      <div className="flex items-baseline justify-between">
+        <div className="font-semibold text-gray-900">Total balance</div>
+        <div className="font-semibold text-gray-900">{formatUSD(balance)}</div>
+      </div>
+
+      <div className="mt-3 space-y-2">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-gray-800">
+            <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: principalColor }} />
+            <span>Total principal</span>
+          </div>
+          <div className="text-gray-900">{formatUSD(principal)}</div>
+        </div>
+
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2 text-gray-800">
+            <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: interestColor }} />
+            <span>Total interest</span>
+          </div>
+          <div className="text-gray-900">{formatUSD(interest)}</div>
+        </div>
+      </div>
     </div>
   );
 }
 
-export default function SocialSecurityCalculator() {
-  const [income, setIncome] = useState(100_000);
-  const [startYear, setStartYear] = useState(1990);
-  const [yearsWorked, setYearsWorked] = useState(35);
+type Props = {
+  initialIncome?: number;
+  initialYearsWorked?: number;
+  initialStartYear?: number;
+};
+
+export default function SocialSecurityCalculator(props: Props) {
+  const [income, setIncome] = useState(props.initialIncome ?? 100_000);
+
+  const [yearsWorked, setYearsWorked] = useState(props.initialYearsWorked ?? 35);
+  const [yearsWorkedInput, setYearsWorkedInput] = useState(String(props.initialYearsWorked ?? 35));
+
+  const defaultStartYear = props.initialStartYear ?? new Date().getFullYear() - (props.initialYearsWorked ?? 35);
+  const [startYear, setStartYear] = useState(defaultStartYear);
+  const [startYearInput, setStartYearInput] = useState(String(defaultStartYear));
 
   const annualReturn = 0.1;
   const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
 
-  const benefitEstimate = useMemo(() => {
-    const covered: number[] = [];
+  const workingYears = useMemo(() => {
+    const y = Math.max(1, Math.min(50, Math.floor(yearsWorked)));
+    const start = Math.max(1900, Math.min(2100, Math.floor(startYear)));
+    return { years: y, start };
+  }, [yearsWorked, startYear]);
 
-    for (let i = 0; i < yearsWorked; i += 1) {
-      const cap = getWageBaseForYear(startYear + i);
-      covered.push(Math.min(income, cap));
+  const capCoverageNote = useMemo(() => {
+    const first = workingYears.start;
+    const last = workingYears.start + workingYears.years - 1;
+
+    const tooEarly = first < MIN_WAGE_BASE_YEAR;
+    const tooLate = last > MAX_WAGE_BASE_YEAR;
+
+    if (!tooEarly && !tooLate) return null;
+
+    if (tooEarly && tooLate) {
+      return `Wage caps are only built in for ${MIN_WAGE_BASE_YEAR}–${MAX_WAGE_BASE_YEAR}. Years outside that range use the nearest available cap.`;
     }
 
-    while (covered.length < 35) covered.push(0);
+    if (tooEarly) {
+      return `Wage caps are only built in starting ${MIN_WAGE_BASE_YEAR}. Earlier years use the ${MIN_WAGE_BASE_YEAR} cap.`;
+    }
 
-    const sumTop35 = covered.sort((a, b) => b - a).slice(0, 35).reduce((a, b) => a + b, 0);
-    const aime = sumTop35 / (35 * 12);
-    const pia = calcPIAFromAIME(aime);
+    return `Wage caps are only built in through ${MAX_WAGE_BASE_YEAR}. Later years use the ${MAX_WAGE_BASE_YEAR} cap.`;
+  }, [workingYears.start, workingYears.years]);
+
+  const totals = useMemo(() => {
+    let totalEmployee = 0;
+    let totalEmployer = 0;
+
+    for (let i = 0; i < workingYears.years; i += 1) {
+      const year = workingYears.start + i;
+      const cap = getWageBaseForYear(year);
+      const taxableWages = Math.min(income, cap);
+
+      totalEmployee += taxableWages * EMPLOYEE_RATE;
+      totalEmployer += taxableWages * EMPLOYER_RATE;
+    }
 
     return {
-      monthly: pia,
-      yearsPaid: AVG_REMAINING_YEARS_AT_67,
+      y: workingYears.years,
+      totalEmployee,
+      totalEmployer,
+      totalCombined: totalEmployee + totalEmployer,
+      firstYear: workingYears.start,
+      lastYear: workingYears.start + workingYears.years - 1,
+      firstCap: getWageBaseForYear(workingYears.start),
+      lastCap: getWageBaseForYear(workingYears.start + workingYears.years - 1),
     };
-  }, [income, startYear, yearsWorked]);
+  }, [income, workingYears.start, workingYears.years]);
 
-  const withdrawalSeries = useMemo(() => {
+  const investmentSeries = useMemo(() => {
+    const y = workingYears.years;
+    const start = workingYears.start;
+
+    const startLabel = "Now";
+    const startYearCalendar = new Date().getFullYear();
+
     let balance = 0;
     let contributed = 0;
-    const points = [{ year: new Date().getFullYear(), balance: 0 }];
 
-    for (let i = 0; i < yearsWorked; i += 1) {
-      const cap = getWageBaseForYear(startYear + i);
-      const annual = Math.min(income, cap) * (EMPLOYEE_RATE + EMPLOYER_RATE);
-      const monthly = annual / 12;
+    const points: {
+      year: number;
+      yearLabel: string;
+      balance: number;
+      principal: number;
+      interest: number;
+    }[] = [{ year: startYearCalendar, yearLabel: startLabel, balance: 0, principal: 0, interest: 0 }];
 
-      for (let m = 0; m < 12; m += 1) {
-        balance = balance * (1 + monthlyReturn) + monthly;
-        contributed += monthly;
+    for (let i = 0; i < y; i += 1) {
+      const workYear = start + i;
+      const cap = getWageBaseForYear(workYear);
+      const taxableWages = Math.min(income, cap);
+
+      const annualEmployee = taxableWages * EMPLOYEE_RATE;
+      const annualEmployer = taxableWages * EMPLOYER_RATE;
+      const annualTotal = annualEmployee + annualEmployer;
+
+      const monthlyContribution = annualTotal / 12;
+
+      for (let m = 1; m <= 12; m += 1) {
+        balance = balance * (1 + monthlyReturn) + monthlyContribution;
+        contributed += monthlyContribution;
       }
 
-      points.push({ year: points[0].year + i + 1, balance });
+      const calendarYear = startYearCalendar + (i + 1);
+      points.push({
+        year: calendarYear,
+        yearLabel: String(calendarYear),
+        balance,
+        principal: contributed,
+        interest: Math.max(0, balance - contributed),
+      });
     }
 
-    const workEndBalance = balance;
-    const workEndPrincipal = contributed;
-    const workEndInterest = workEndBalance - workEndPrincipal;
+    return points;
+  }, [income, monthlyReturn, workingYears.start, workingYears.years]);
 
-    const monthsRetired = Math.round(benefitEstimate.yearsPaid * 12);
-    const withdrawal = benefitEstimate.monthly;
+  const xTicks = useMemo(() => {
+    const first = investmentSeries[0]?.year;
+    const last = investmentSeries[investmentSeries.length - 1]?.year;
+    if (first == null || last == null) return [];
 
-    for (let m = 1; m <= monthsRetired; m += 1) {
-      balance = Math.max(0, balance * (1 + monthlyReturn) - withdrawal);
-      if (m % 12 === 0) {
-        points.push({ year: points[0].year + yearsWorked + m / 12, balance });
-      }
-    }
+    const mid = first + Math.floor((last - first) / 2);
+    return [first, mid, last];
+  }, [investmentSeries]);
 
-    return {
-      points,
-      workEndBalance,
-      workEndPrincipal,
-      workEndInterest,
-    };
-  }, [income, startYear, yearsWorked, benefitEstimate, monthlyReturn]);
+  const yAxisMax = useMemo(() => {
+    const max = Math.max(...investmentSeries.map((p) => p.balance));
+    return max * 1.1;
+  }, [investmentSeries]);
+
+  const ending = investmentSeries[investmentSeries.length - 1];
+  const endingBalance = ending?.balance ?? 0;
+  const endingPrincipal = ending?.principal ?? 0;
+  const endingInterest = ending?.interest ?? 0;
+
+  // “Per year” display uses the FIRST working year cap as a representative snapshot.
+  const perYearSnapshot = useMemo(() => {
+    const cap = getWageBaseForYear(workingYears.start);
+    const taxableWages = Math.min(income, cap);
+    const employee = taxableWages * EMPLOYEE_RATE;
+    const employer = taxableWages * EMPLOYER_RATE;
+    return { cap, taxableWages, employee, employer, total: employee + employer };
+  }, [income, workingYears.start]);
 
   return (
     <section className="space-y-6">
@@ -219,52 +386,27 @@ export default function SocialSecurityCalculator() {
             min={1900}
             max={2100}
             value={startYearInput}
-onChange={(e) => {
-  const v = e.target.value;
-  setStartYearInput(v);
+            onChange={(e) => {
+              const v = e.target.value;
+              setStartYearInput(v);
 
-  // Allow clearing while typing
-  if (v === "") return;
+              if (v === "") return;
 
-  // Allow partial typing like "2", "20", "202"
-  if (!/^\d{1,4}$/.test(v)) return;
+              const n = Number(v);
+              if (Number.isNaN(n)) return;
 
-  // Only commit to state once it looks like a full year
-  if (v.length < 4) return;
-
-  const n = Number(v);
-  if (Number.isNaN(n)) return;
-
-  const clamped = Math.max(1900, Math.min(2100, n));
-  setStartYear(clamped);
-
-  // Normalize displayed value if clamped
-  if (clamped !== n) setStartYearInput(String(clamped));
-}}
-onBlur={() => {
-  // If they leave it blank, snap back to last valid
-  if (startYearInput === "") {
-    setStartYearInput(String(startYear));
-    return;
-  }
-
-  // If they leave a partial year (like "202"), snap back
-  if (!/^\d{4}$/.test(startYearInput)) {
-    setStartYearInput(String(startYear));
-    return;
-  }
-
-  const n = Number(startYearInput);
-  const clamped = Math.max(1900, Math.min(2100, n));
-  setStartYear(clamped);
-  setStartYearInput(String(clamped));
-}}
-
+              const clamped = Math.max(1900, Math.min(2100, Math.floor(n)));
+              setStartYear(clamped);
+              setStartYearInput(String(clamped));
+            }}
+            onBlur={() => {
+              if (startYearInput === "") setStartYearInput(String(startYear));
+            }}
           />
         </label>
 
         <label className="block">
-          <div className="font-medium">Total years worked (Or that you plan on working)</div>
+          <div className="font-medium">Years worked</div>
           <input
             className="mt-1 w-full rounded border px-3 py-2"
             type="number"
@@ -289,6 +431,12 @@ onBlur={() => {
             }}
           />
         </label>
+
+        {capCoverageNote && (
+          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
+            {capCoverageNote}
+          </div>
+        )}
       </div>
 
       <div className="rounded border p-4 space-y-3">
@@ -303,33 +451,100 @@ onBlur={() => {
             <div>Employer pays: {formatUSD(perYearSnapshot.employer)}</div>
             <div className="mt-2 font-bold">Total: {formatUSD(perYearSnapshot.total)}</div>
           </div>
-          <div className="text-3xl font-extrabold text-emerald-700">
-            {formatUSD(withdrawalSeries.workEndBalance)}
-          </div>
-          <div className="text-sm text-gray-700">
-            Principal: {formatUSD(withdrawalSeries.workEndPrincipal)} · Interest:{" "}
-            {formatUSD(withdrawalSeries.workEndInterest)}
+
+          <div>
+            <div className="font-semibold mb-1">
+              Over {totals.y} years ({totals.firstYear}–{totals.lastYear})
+            </div>
+            <div>First-year wage base: {formatUSD(totals.firstCap)}</div>
+            <div>Last-year wage base: {formatUSD(totals.lastCap)}</div>
+            <div className="mt-2">You pay: {formatUSD(totals.totalEmployee)}</div>
+            <div>Employer pays: {formatUSD(totals.totalEmployer)}</div>
+            <div className="mt-2 font-bold">Total: {formatUSD(totals.totalCombined)}</div>
           </div>
         </div>
 
-        <div className="w-full aspect-[6/5]">
-          <ResponsiveContainer>
-            <AreaChart data={withdrawalSeries.points}>
-              <CartesianGrid strokeDasharray="3 3" vertical={false} />
-              <XAxis dataKey="year" />
-              <YAxis tickFormatter={formatYAxisTick} />
-              <Tooltip content={<CustomBalanceTooltip />} />
-              <Legend />
-              <Area
-                type="monotone"
-                dataKey="balance"
-                stroke="#111827"
-                fill="#111827"
-                fillOpacity={0.15}
-                dot={false}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        <div className="pt-4 border-t space-y-2">
+          <h3 className="text-lg font-semibold">If those contributions were invested at 10%</h3>
+
+          <div className="text-center">
+            <div className="text-sm text-gray-600">Estimated value after {totals.y} years:</div>
+            <div className="text-3xl font-extrabold text-emerald-700">{formatUSD(endingBalance)}</div>
+            <div className="mt-1 text-sm text-gray-700">
+              Principal: {formatUSD(endingPrincipal)} {" · "} Interest: {formatUSD(endingInterest)}
+            </div>
+          </div>
+
+          <div className="w-full max-w-2xl aspect-[6/5] mx-auto mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={investmentSeries} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <defs>
+                  <linearGradient id="ssPrincipalFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#1D4ED8" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.03} />
+                  </linearGradient>
+                  <linearGradient id="ssInterestFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
+
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+                <XAxis
+                  dataKey="year"
+                  ticks={xTicks}
+                  interval={0}
+                  tickFormatter={(v) => {
+                    const first = xTicks[0];
+                    if (first != null && Number(v) === first) return "Now";
+                    return String(v);
+                  }}
+                  label={{ value: "Year", position: "insideBottom", offset: -5 }}
+                />
+
+                <YAxis domain={[0, yAxisMax]} tickFormatter={(v) => formatYAxisTick(Number(v))} />
+
+                <Tooltip
+                  content={<CustomSSInvestmentTooltip />}
+                  labelFormatter={(value) => {
+                    const first = xTicks[0];
+                    if (first != null && Number(value) === first) return "Now";
+                    return `Year ${value}`;
+                  }}
+                />
+
+                <Legend verticalAlign="bottom" align="right" iconType="square" />
+
+                <Area
+                  type="monotone"
+                  dataKey="principal"
+                  name="Total principal"
+                  stackId="1"
+                  stroke="#1D4ED8"
+                  fill="url(#ssPrincipalFill)"
+                  dot={false}
+                  activeDot={false}
+                />
+                <Area
+                  type="monotone"
+                  dataKey="interest"
+                  name="Total interest"
+                  stackId="1"
+                  stroke="#047857"
+                  fill="url(#ssInterestFill)"
+                  dot={false}
+                  activeDot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
+
+          <p className="text-xs text-gray-600">
+            <span className="font-medium">Investment assumption:</span> Assumes the combined employee and employer
+            OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
+            assumption. Results are illustrative only and not financial advice.
+          </p>
         </div>
       </div>
     </section>
