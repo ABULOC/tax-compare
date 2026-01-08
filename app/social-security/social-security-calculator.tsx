@@ -14,7 +14,7 @@ import {
 
 /**
  * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
- * Source: SSA OACT (Contribution and Benefit Base, 1937–2026). :contentReference[oaicite:1]{index=1}
+ // Source: SSA OACT (Contribution and Benefit Base, 1937–2026).
  */
 const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   1937: 3_000,
@@ -123,6 +123,29 @@ const MAX_WAGE_BASE_YEAR = Math.max(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(
 // Employer: 6.2%
 const EMPLOYEE_RATE = 0.062;
 const EMPLOYER_RATE = 0.062;
+
+
+
+// PIA bend points (current-law formula, example year 2026). :contentReference[oaicite:2]{index=2}
+const PIA_BEND_1 = 1_286;
+const PIA_BEND_2 = 7_749;
+
+// Remaining life expectancy at age 67 (SSA 2022 period life table). :contentReference[oaicite:3]{index=3}
+// Male: 16.11, Female: 18.56. Use simple average as "average person".
+const AVG_REMAINING_YEARS_AT_67 = (16.11 + 18.56) / 2;
+
+function calcPIAFromAIME(aime: number) {
+  const x = Math.max(0, aime);
+
+  const part1 = Math.min(x, PIA_BEND_1) * 0.9;
+  const part2 = Math.max(0, Math.min(x, PIA_BEND_2) - PIA_BEND_1) * 0.32;
+  const part3 = Math.max(0, x - PIA_BEND_2) * 0.15;
+
+  return part1 + part2 + part3;
+}
+
+
+
 
 function formatUSD(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -241,26 +264,6 @@ export default function SocialSecurityCalculator(props: Props) {
     return { years: y, start };
   }, [yearsWorked, startYear]);
 
-  const capCoverageNote = useMemo(() => {
-    const first = workingYears.start;
-    const last = workingYears.start + workingYears.years - 1;
-
-    const tooEarly = first < MIN_WAGE_BASE_YEAR;
-    const tooLate = last > MAX_WAGE_BASE_YEAR;
-
-    if (!tooEarly && !tooLate) return null;
-
-    if (tooEarly && tooLate) {
-      return `Wage caps are only built in for ${MIN_WAGE_BASE_YEAR}–${MAX_WAGE_BASE_YEAR}. Years outside that range use the nearest available cap.`;
-    }
-
-    if (tooEarly) {
-      return `Wage caps are only built in starting ${MIN_WAGE_BASE_YEAR}. Earlier years use the ${MIN_WAGE_BASE_YEAR} cap.`;
-    }
-
-    return `Wage caps are only built in through ${MAX_WAGE_BASE_YEAR}. Later years use the ${MAX_WAGE_BASE_YEAR} cap.`;
-  }, [workingYears.start, workingYears.years]);
-
   const totals = useMemo(() => {
     let totalEmployee = 0;
     let totalEmployer = 0;
@@ -285,6 +288,46 @@ export default function SocialSecurityCalculator(props: Props) {
       lastCap: getWageBaseForYear(workingYears.start + workingYears.years - 1),
     };
   }, [income, workingYears.start, workingYears.years]);
+
+
+
+  const benefitEstimate = useMemo(() => {
+  // Build covered earnings per year (income capped by wage base for each working year)
+  const covered: number[] = [];
+
+  for (let i = 0; i < workingYears.years; i += 1) {
+    const year = workingYears.start + i;
+    const cap = getWageBaseForYear(year);
+    covered.push(Math.min(income, cap));
+  }
+
+  // Social Security uses 35 years of earnings (with zeros if fewer).
+  const top35 = covered
+    .slice()
+    .sort((a, b) => b - a)
+    .slice(0, 35);
+
+  const sumTop35 = top35.reduce((s, v) => s + v, 0);
+
+  // AIME is average monthly earnings over 35 years = sum / 420 months
+  const aime = sumTop35 / (35 * 12);
+
+  // PIA (Primary Insurance Amount). For this simplified model, assume benefit at 67 equals PIA.
+  const pia = calcPIAFromAIME(aime);
+
+  // Approx lifetime benefits using "average person" remaining years at 67.
+  const totalLifetime = pia * 12 * AVG_REMAINING_YEARS_AT_67;
+
+  return {
+    aime,
+    piaMonthlyAt67: pia,
+    expectedYearsPaid: AVG_REMAINING_YEARS_AT_67,
+    totalLifetime,
+  };
+}, [income, workingYears.start, workingYears.years]);
+
+
+
 
   const investmentSeries = useMemo(() => {
     const y = workingYears.years;
@@ -365,18 +408,16 @@ export default function SocialSecurityCalculator(props: Props) {
     <section className="space-y-6">
       <div className="space-y-4">
         <label className="block">
-          <div className="font-medium">Annual income</div>
-          <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            type="text"
-            inputMode="numeric"
-            value={`$${formatNumberInput(income)}`}
-            onChange={(e) => setIncome(parseNumberInput(e.target.value))}
-          />
-          <div className="mt-1 text-xs text-gray-600">
-            Social Security applies only up to the wage base each year.
-          </div>
-        </label>
+  <div className="font-medium">Annual income</div>
+  <input
+    className="mt-1 w-full rounded border px-3 py-2"
+    type="text"
+    inputMode="numeric"
+    value={`$${formatNumberInput(income)}`}
+    onChange={(e) => setIncome(parseNumberInput(e.target.value))}
+  />
+</label>
+
 
         <label className="block">
           <div className="font-medium">Year you started working</div>
@@ -386,27 +427,52 @@ export default function SocialSecurityCalculator(props: Props) {
             min={1900}
             max={2100}
             value={startYearInput}
-            onChange={(e) => {
-              const v = e.target.value;
-              setStartYearInput(v);
+onChange={(e) => {
+  const v = e.target.value;
+  setStartYearInput(v);
 
-              if (v === "") return;
+  // Allow clearing while typing
+  if (v === "") return;
 
-              const n = Number(v);
-              if (Number.isNaN(n)) return;
+  // Allow partial typing like "2", "20", "202"
+  if (!/^\d{1,4}$/.test(v)) return;
 
-              const clamped = Math.max(1900, Math.min(2100, Math.floor(n)));
-              setStartYear(clamped);
-              setStartYearInput(String(clamped));
-            }}
-            onBlur={() => {
-              if (startYearInput === "") setStartYearInput(String(startYear));
-            }}
+  // Only commit to state once it looks like a full year
+  if (v.length < 4) return;
+
+  const n = Number(v);
+  if (Number.isNaN(n)) return;
+
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+
+  // Normalize displayed value if clamped
+  if (clamped !== n) setStartYearInput(String(clamped));
+}}
+onBlur={() => {
+  // If they leave it blank, snap back to last valid
+  if (startYearInput === "") {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  // If they leave a partial year (like "202"), snap back
+  if (!/^\d{4}$/.test(startYearInput)) {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  const n = Number(startYearInput);
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+  setStartYearInput(String(clamped));
+}}
+
           />
         </label>
 
         <label className="block">
-          <div className="font-medium">Years worked</div>
+          <div className="font-medium">Total years worked (Or that you plan on working)</div>
           <input
             className="mt-1 w-full rounded border px-3 py-2"
             type="number"
@@ -431,12 +497,6 @@ export default function SocialSecurityCalculator(props: Props) {
             }}
           />
         </label>
-
-        {capCoverageNote && (
-          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            {capCoverageNote}
-          </div>
-        )}
       </div>
 
       <div className="rounded border p-4 space-y-3">
@@ -463,6 +523,50 @@ export default function SocialSecurityCalculator(props: Props) {
             <div className="mt-2 font-bold">Total: {formatUSD(totals.totalCombined)}</div>
           </div>
         </div>
+
+
+<div className="pt-4 border-t">
+  <h3 className="text-lg font-semibold">
+    Estimated Social Security benefit at age 67
+  </h3>
+
+  <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <div className="text-sm text-gray-600">
+        Estimated monthly benefit (at 67)
+      </div>
+      <div className="text-2xl font-bold">
+        {formatUSD(benefitEstimate.piaMonthlyAt67)}
+        <span className="text-sm font-normal text-gray-600"> / month</span>
+      </div>
+      <div className="mt-1 text-xs text-gray-600">
+        Based on a simplified AIME → PIA estimate.
+      </div>
+    </div>
+
+    <div>
+      <div className="text-sm text-gray-600">
+        Estimated total paid over an average lifespan
+      </div>
+      <div className="text-2xl font-bold">
+        {formatUSD(benefitEstimate.totalLifetime)}
+      </div>
+      <div className="mt-1 text-xs text-gray-600">
+        Assumes you begin taking payments at 67 and live to be 84.
+      </div>
+    </div>
+  </div>
+
+<p className="mt-3 text-xs text-gray-600">
+  This is a simplified estimate that ignores wage indexing, COLAs, spousal
+  benefits, and other rules. Bend points and life expectancy are based on SSA
+  published references.
+</p>
+
+</div>
+
+
+
 
         <div className="pt-4 border-t space-y-2">
           <h3 className="text-lg font-semibold">If those contributions were invested at 10%</h3>
@@ -548,5 +652,6 @@ export default function SocialSecurityCalculator(props: Props) {
         </div>
       </div>
     </section>
+
   );
 }
