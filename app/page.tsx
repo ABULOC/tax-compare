@@ -20,18 +20,19 @@ export default function Home() {
 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
   <Link
     href="/compare"
-    className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
+    className="inline-block rounded bg-black px-5 py-3 text-white text-center"
   >
     State tax calculator
   </Link>
 
   <Link
     href="/social-security"
-    className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
+    className="inline-block rounded bg-gray-100 px-5 py-3 text-gray-900 text-center hover:bg-gray-200"
   >
     Social Security calculator
   </Link>
 </div>
+
 
 
 
