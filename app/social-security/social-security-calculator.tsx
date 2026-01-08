@@ -677,6 +677,11 @@ onBlur={() => {
   {formatUSD(endingBalanceAfterRetirement)}
 </div>
 
+<div className="mt-1 text-xs text-gray-600">
+  Assumes you begin taking payments at 67 and live to be 84.
+</div>
+
+
   </div>
 
   {/* Portfolio growth during work years + drawdown during retirement */}
