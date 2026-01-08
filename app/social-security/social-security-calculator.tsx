@@ -196,12 +196,112 @@ export default function SocialSecurityCalculator() {
 
   return (
     <section className="space-y-6">
-      <div className="rounded border p-4 space-y-4">
-        <h3 className="text-lg font-semibold">If those contributions were invested at 10%</h3>
+      <div className="space-y-4">
+        <label className="block">
+          <div className="font-medium">Annual income</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="text"
+            inputMode="numeric"
+            value={`$${formatNumberInput(income)}`}
+            onChange={(e) => setIncome(parseNumberInput(e.target.value))}
+          />
+          <div className="mt-1 text-xs text-gray-600">
+            Social Security applies only up to the wage base each year.
+          </div>
+        </label>
 
-        <div className="text-center">
-          <div className="text-sm text-gray-600">
-            Estimated value after {yearsWorked} years
+        <label className="block">
+          <div className="font-medium">Year you started working</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="number"
+            min={1900}
+            max={2100}
+            value={startYearInput}
+onChange={(e) => {
+  const v = e.target.value;
+  setStartYearInput(v);
+
+  // Allow clearing while typing
+  if (v === "") return;
+
+  // Allow partial typing like "2", "20", "202"
+  if (!/^\d{1,4}$/.test(v)) return;
+
+  // Only commit to state once it looks like a full year
+  if (v.length < 4) return;
+
+  const n = Number(v);
+  if (Number.isNaN(n)) return;
+
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+
+  // Normalize displayed value if clamped
+  if (clamped !== n) setStartYearInput(String(clamped));
+}}
+onBlur={() => {
+  // If they leave it blank, snap back to last valid
+  if (startYearInput === "") {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  // If they leave a partial year (like "202"), snap back
+  if (!/^\d{4}$/.test(startYearInput)) {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  const n = Number(startYearInput);
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+  setStartYearInput(String(clamped));
+}}
+
+          />
+        </label>
+
+        <label className="block">
+          <div className="font-medium">Total years worked (Or that you plan on working)</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="number"
+            min={1}
+            max={50}
+            value={yearsWorkedInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              setYearsWorkedInput(v);
+
+              if (v === "") return;
+
+              const n = Number(v);
+              if (Number.isNaN(n)) return;
+
+              const clamped = Math.max(1, Math.min(50, Math.floor(n)));
+              setYearsWorked(clamped);
+              setYearsWorkedInput(String(clamped));
+            }}
+            onBlur={() => {
+              if (yearsWorkedInput === "") setYearsWorkedInput(String(yearsWorked));
+            }}
+          />
+        </label>
+      </div>
+
+      <div className="rounded border p-4 space-y-3">
+        <h2 className="text-xl font-semibold">Estimated Social Security contributions</h2>
+
+        <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+          <div>
+            <div className="font-semibold mb-1">Per year (snapshot)</div>
+            <div>Wage base used: {formatUSD(perYearSnapshot.cap)}</div>
+            <div>Taxable wages: {formatUSD(perYearSnapshot.taxableWages)}</div>
+            <div className="mt-2">You pay: {formatUSD(perYearSnapshot.employee)}</div>
+            <div>Employer pays: {formatUSD(perYearSnapshot.employer)}</div>
+            <div className="mt-2 font-bold">Total: {formatUSD(perYearSnapshot.total)}</div>
           </div>
           <div className="text-3xl font-extrabold text-emerald-700">
             {formatUSD(withdrawalSeries.workEndBalance)}
