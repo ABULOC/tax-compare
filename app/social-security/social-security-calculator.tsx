@@ -14,7 +14,7 @@ import {
 
 /**
  * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
- * Source: SSA OACT (Contribution and Benefit Base, 1937–2026). :contentReference[oaicite:1]{index=1}
+ // Source: SSA OACT (Contribution and Benefit Base, 1937–2026).
  */
 const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   1937: 3_000,
@@ -123,6 +123,29 @@ const MAX_WAGE_BASE_YEAR = Math.max(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(
 // Employer: 6.2%
 const EMPLOYEE_RATE = 0.062;
 const EMPLOYER_RATE = 0.062;
+
+
+
+// PIA bend points (current-law formula, example year 2026). :contentReference[oaicite:2]{index=2}
+const PIA_BEND_1 = 1_286;
+const PIA_BEND_2 = 7_749;
+
+// Remaining life expectancy at age 67 (SSA 2022 period life table). :contentReference[oaicite:3]{index=3}
+// Male: 16.11, Female: 18.56. Use simple average as "average person".
+const AVG_REMAINING_YEARS_AT_67 = (16.11 + 18.56) / 2;
+
+function calcPIAFromAIME(aime: number) {
+  const x = Math.max(0, aime);
+
+  const part1 = Math.min(x, PIA_BEND_1) * 0.9;
+  const part2 = Math.max(0, Math.min(x, PIA_BEND_2) - PIA_BEND_1) * 0.32;
+  const part3 = Math.max(0, x - PIA_BEND_2) * 0.15;
+
+  return part1 + part2 + part3;
+}
+
+
+
 
 function formatUSD(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -265,6 +288,46 @@ export default function SocialSecurityCalculator(props: Props) {
       lastCap: getWageBaseForYear(workingYears.start + workingYears.years - 1),
     };
   }, [income, workingYears.start, workingYears.years]);
+
+
+
+  const benefitEstimate = useMemo(() => {
+  // Build covered earnings per year (income capped by wage base for each working year)
+  const covered: number[] = [];
+
+  for (let i = 0; i < workingYears.years; i += 1) {
+    const year = workingYears.start + i;
+    const cap = getWageBaseForYear(year);
+    covered.push(Math.min(income, cap));
+  }
+
+  // Social Security uses 35 years of earnings (with zeros if fewer).
+  const top35 = covered
+    .slice()
+    .sort((a, b) => b - a)
+    .slice(0, 35);
+
+  const sumTop35 = top35.reduce((s, v) => s + v, 0);
+
+  // AIME is average monthly earnings over 35 years = sum / 420 months
+  const aime = sumTop35 / (35 * 12);
+
+  // PIA (Primary Insurance Amount). For this simplified model, assume benefit at 67 equals PIA.
+  const pia = calcPIAFromAIME(aime);
+
+  // Approx lifetime benefits using "average person" remaining years at 67.
+  const totalLifetime = pia * 12 * AVG_REMAINING_YEARS_AT_67;
+
+  return {
+    aime,
+    piaMonthlyAt67: pia,
+    expectedYearsPaid: AVG_REMAINING_YEARS_AT_67,
+    totalLifetime,
+  };
+}, [income, workingYears.start, workingYears.years]);
+
+
+
 
   const investmentSeries = useMemo(() => {
     const y = workingYears.years;
@@ -460,6 +523,51 @@ onBlur={() => {
             <div className="mt-2 font-bold">Total: {formatUSD(totals.totalCombined)}</div>
           </div>
         </div>
+
+
+<div className="pt-4 border-t">
+  <h3 className="text-lg font-semibold">
+    Estimated Social Security benefit at age 67
+  </h3>
+
+  <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+    <div>
+      <div className="text-sm text-gray-600">
+        Estimated monthly benefit (at 67)
+      </div>
+      <div className="text-2xl font-bold">
+        {formatUSD(benefitEstimate.piaMonthlyAt67)}
+        <span className="text-sm font-normal text-gray-600"> / month</span>
+      </div>
+      <div className="mt-1 text-xs text-gray-600">
+        Based on a simplified AIME → PIA estimate.
+      </div>
+    </div>
+
+    <div>
+      <div className="text-sm text-gray-600">
+        Estimated total paid over an average lifespan
+      </div>
+      <div className="text-2xl font-bold">
+        {formatUSD(benefitEstimate.totalLifetime)}
+      </div>
+      <div className="mt-1 text-xs text-gray-600">
+        Assumes {benefitEstimate.expectedYearsPaid.toFixed(1)} years of payments
+        after age 67 (simple average).
+      </div>
+    </div>
+  </div>
+
+<p className="mt-3 text-xs text-gray-600">
+  This is a simplified estimate that ignores wage indexing, COLAs, spousal
+  benefits, and other rules. Bend points and life expectancy are based on SSA
+  published references.
+</p>
+
+</div>
+
+
+
 
         <div className="pt-4 border-t space-y-2">
           <h3 className="text-lg font-semibold">If those contributions were invested at 10%</h3>
