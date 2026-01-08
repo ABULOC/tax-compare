@@ -1635,7 +1635,7 @@ const yAxisMax = useMemo(() => {
 <div className="w-full max-w-2xl aspect-[6/5] mx-auto">
 
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={investmentSeries} margin={{ top: 10, right: 20, left: 5, bottom: 10 }}>
+                <AreaChart data={investmentSeries} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
   <defs>
     <linearGradient id="principalFill" x1="0" y1="0" x2="0" y2="1">
       <stop offset="0%" stopColor="#1D4ED8" stopOpacity={0.25} />
