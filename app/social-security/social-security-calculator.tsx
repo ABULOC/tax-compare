@@ -675,29 +675,6 @@ onBlur={() => {
 <div className="mt-1 text-xl font-bold text-gray-900">
   {formatUSD(endingBalanceAfterRetirement)}
 </div>
-
-
-
-
-    <div className="mt-1 text-sm text-gray-700">
-      Then withdraw {formatUSD(portfolioSeries.monthlyWithdrawal)} / month for{" "}
-      {AVG_REMAINING_YEARS_AT_67.toFixed(1)} years.
-    </div>
-
-    <div className="mt-1 text-sm text-gray-700">
-      Ending balance after withdrawals:{" "}
-      <span className="font-semibold">
-        {formatUSD(endingBalanceAfterRetirement)}
-      </span>
-    </div>
-
-    <div className="mt-1 text-xs text-gray-600">
-      Portfolio sustained withdrawals for{" "}
-      {Math.floor(portfolioSeries.monthsSustained / 12)}y{" "}
-      {portfolioSeries.monthsSustained % 12}m (out of{" "}
-      {Math.floor(portfolioSeries.retirementMonths / 12)}y{" "}
-      {portfolioSeries.retirementMonths % 12}m).
-    </div>
   </div>
 
   {/* Portfolio growth during work years + drawdown during retirement */}
