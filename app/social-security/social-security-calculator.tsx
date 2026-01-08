@@ -586,9 +586,7 @@ onBlur={() => {
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
-            <div className="font-semibold mb-1">Per year (snapshot)</div>
-            <div>Wage base used: {formatUSD(perYearSnapshot.cap)}</div>
-            <div>Taxable wages: {formatUSD(perYearSnapshot.taxableWages)}</div>
+            <div className="font-semibold mb-1">Per year</div>
             <div className="mt-2">You pay: {formatUSD(perYearSnapshot.employee)}</div>
             <div>Employer pays: {formatUSD(perYearSnapshot.employer)}</div>
             <div className="mt-2 font-bold">Total: {formatUSD(perYearSnapshot.total)}</div>
