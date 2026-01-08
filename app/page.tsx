@@ -17,22 +17,22 @@ export default function Home() {
           over time if invested.
         </p>
 
-        <div className="pt-1">
 <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
   <Link
     href="/compare"
-    className="inline-block rounded bg-black px-5 py-3 text-white text-center"
+    className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
   >
-    Compare state taxes
+    State tax calculator
   </Link>
 
   <Link
     href="/social-security"
-    className="inline-block rounded border border-gray-300 px-5 py-3 text-gray-900 text-center hover:bg-gray-50"
+    className="inline-block rounded bg-black px-5 py-3 text-white text-center hover:bg-gray-900"
   >
     Social Security calculator
   </Link>
 </div>
+
 
 
 
