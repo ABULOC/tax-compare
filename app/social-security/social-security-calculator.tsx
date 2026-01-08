@@ -1,7 +1,16 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { Tooltip } from "recharts";
+import {
+  XAxis,
+  YAxis,
+  Tooltip,
+  ResponsiveContainer,
+  CartesianGrid,
+  AreaChart,
+  Area,
+} from "recharts";
+
 
 /**
  * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
@@ -230,6 +239,37 @@ function CustomSSInvestmentTooltip({
   );
 }
 
+
+
+function CustomPortfolioTooltip({
+  active,
+  label,
+  payload,
+}: {
+  active?: boolean;
+  label?: string | number;
+  payload?: Array<{ name?: string; value?: number }>;
+}) {
+  if (!active || !payload || payload.length === 0) return null;
+
+  const balance = payload[0]?.value ?? 0;
+
+  return (
+    <div className="rounded-md border bg-white shadow-lg px-4 py-3 min-w-[220px]">
+      <div className="text-sm text-gray-600">{String(label)}</div>
+      <div className="my-3 h-px bg-gray-200" />
+      <div className="flex items-baseline justify-between">
+        <div className="font-semibold text-gray-900">Balance</div>
+        <div className="font-semibold text-gray-900">{formatUSD(balance)}</div>
+      </div>
+    </div>
+  );
+}
+
+
+
+
+
 type Props = {
   initialIncome?: number;
   initialYearsWorked?: number;
@@ -320,71 +360,122 @@ export default function SocialSecurityCalculator(props: Props) {
 
 
 
-  const investmentSeries = useMemo(() => {
-    const y = workingYears.years;
-    const start = workingYears.start;
+const portfolioSeries = useMemo(() => {
+  const y = workingYears.years;
+  const start = workingYears.start;
 
-    const startLabel = "Now";
-    const startYearCalendar = new Date().getFullYear();
+  const startYearCalendar = new Date().getFullYear();
 
-    let balance = 0;
-    let contributed = 0;
+  // Retirement withdrawal duration (17.3 years) in months
+  const retirementMonths = Math.round(AVG_REMAINING_YEARS_AT_67 * 12);
 
-    const points: {
-      year: number;
-      yearLabel: string;
-      balance: number;
-      principal: number;
-      interest: number;
-    }[] = [{ year: startYearCalendar, yearLabel: startLabel, balance: 0, principal: 0, interest: 0 }];
+  // Monthly withdrawal equals estimated SS monthly benefit at 67
+  const monthlyWithdrawal = benefitEstimate.piaMonthlyAt67;
 
-    for (let i = 0; i < y; i += 1) {
-      const workYear = start + i;
-      const cap = getWageBaseForYear(workYear);
-      const taxableWages = Math.min(income, cap);
+  let balance = 0;
 
-      const annualEmployee = taxableWages * EMPLOYEE_RATE;
-      const annualEmployer = taxableWages * EMPLOYER_RATE;
-      const annualTotal = annualEmployee + annualEmployer;
+  const points: { year: number; yearLabel: string; balance: number }[] = [
+    { year: startYearCalendar, yearLabel: "Now", balance: 0 },
+  ];
 
-      const monthlyContribution = annualTotal / 12;
+  // ---- Accumulation phase (working years) ----
+  for (let i = 0; i < y; i += 1) {
+    const workYear = start + i;
+    const cap = getWageBaseForYear(workYear);
+    const taxableWages = Math.min(income, cap);
 
-      for (let m = 1; m <= 12; m += 1) {
-        balance = balance * (1 + monthlyReturn) + monthlyContribution;
-        contributed += monthlyContribution;
-      }
+    const annualEmployee = taxableWages * EMPLOYEE_RATE;
+    const annualEmployer = taxableWages * EMPLOYER_RATE;
+    const annualTotal = annualEmployee + annualEmployer;
 
-      const calendarYear = startYearCalendar + (i + 1);
+    const monthlyContribution = annualTotal / 12;
+
+    for (let m = 1; m <= 12; m += 1) {
+      balance = balance * (1 + monthlyReturn) + monthlyContribution;
+    }
+
+    const calendarYear = startYearCalendar + (i + 1);
+    points.push({
+      year: calendarYear,
+      yearLabel: String(calendarYear),
+      balance,
+    });
+  }
+
+  // ---- Withdrawal phase (next 17.3 years) ----
+  // Start withdrawals the month after the last contribution month.
+  let monthsSustained = 0;
+
+  for (let monthIndex = 1; monthIndex <= retirementMonths; monthIndex += 1) {
+    balance = balance * (1 + monthlyReturn) - monthlyWithdrawal;
+
+    if (balance <= 0) {
+      balance = 0;
+      monthsSustained = monthIndex;
+      // Push an endpoint point at the year boundary if desired, but always end the series
+      // at the year containing exhaustion.
+      break;
+    }
+
+    monthsSustained = monthIndex;
+
+    // Add a point once per year during retirement to keep the chart readable
+    if (monthIndex % 12 === 0) {
+      const yearsIntoRetirement = monthIndex / 12;
+      const calendarYear = startYearCalendar + y + yearsIntoRetirement;
       points.push({
         year: calendarYear,
         yearLabel: String(calendarYear),
         balance,
-        principal: contributed,
-        interest: Math.max(0, balance - contributed),
       });
     }
+  }
 
-    return points;
-  }, [income, monthlyReturn, workingYears.start, workingYears.years]);
+  // Ensure we include the final retirement year point if the portfolio lasted the whole period
+  if (monthsSustained === retirementMonths) {
+    const finalCalendarYear = startYearCalendar + y + Math.ceil(retirementMonths / 12);
+    const alreadyHasFinal = points.some((p) => p.year === finalCalendarYear);
+    if (!alreadyHasFinal) {
+      points.push({
+        year: finalCalendarYear,
+        yearLabel: String(finalCalendarYear),
+        balance,
+      });
+    }
+  }
 
-  const xTicks = useMemo(() => {
-    const first = investmentSeries[0]?.year;
-    const last = investmentSeries[investmentSeries.length - 1]?.year;
-    if (first == null || last == null) return [];
+  return {
+    points,
+    monthlyWithdrawal,
+    monthsSustained,
+    retirementMonths,
+    endingBalanceAfterWork: points[y]?.balance ?? 0,
+    endingBalanceAfterRetirement: points[points.length - 1]?.balance ?? 0,
+  };
+}, [income, monthlyReturn, workingYears.start, workingYears.years, benefitEstimate.piaMonthlyAt67]);
 
-    const mid = first + Math.floor((last - first) / 2);
-    return [first, mid, last];
-  }, [investmentSeries]);
 
-  const yAxisMax = useMemo(() => {
-    const max = Math.max(...investmentSeries.map((p) => p.balance));
-    return max * 1.1;
-  }, [investmentSeries]);
 
-  const ending = investmentSeries[investmentSeries.length - 1];
-  const endingBalance = ending?.balance ?? 0;
-  const endingPrincipal = ending?.principal ?? 0;
-  const endingInterest = ending?.interest ?? 0;
+
+
+const xTicks = useMemo(() => {
+  const first = portfolioSeries.points[0]?.year;
+  const last = portfolioSeries.points[portfolioSeries.points.length - 1]?.year;
+  if (first == null || last == null) return [];
+  const mid = first + Math.floor((last - first) / 2);
+  return [first, mid, last];
+}, [portfolioSeries.points]);
+
+
+const yAxisMax = useMemo(() => {
+  const max = Math.max(...portfolioSeries.points.map((p) => p.balance));
+  return max * 1.1;
+}, [portfolioSeries.points]);
+
+
+const endingBalance = portfolioSeries.endingBalanceAfterWork;
+const endingBalanceAfterRetirement = portfolioSeries.endingBalanceAfterRetirement;
+
 
   // “Per year” display uses the FIRST working year cap as a representative snapshot.
   const perYearSnapshot = useMemo(() => {
@@ -559,23 +650,97 @@ onBlur={() => {
 
 
 
-        <div className="pt-4 border-t space-y-2">
-          <h3 className="text-lg font-semibold">If those contributions were invested at 10%</h3>
+<div className="pt-4 border-t space-y-2">
+  <h3 className="text-lg font-semibold">
+    If those contributions were instead invested at 10%
+  </h3>
 
-          <div className="text-center">
-            <div className="text-sm text-gray-600">Estimated value after {totals.y} years:</div>
-            <div className="text-3xl font-extrabold text-emerald-700">{formatUSD(endingBalance)}</div>
-            <div className="mt-1 text-sm text-gray-700">
-              Principal: {formatUSD(endingPrincipal)} {" · "} Interest: {formatUSD(endingInterest)}
-            </div>
-          </div>
+  <div className="text-center">
+    <div className="text-sm text-gray-600">
+      Estimated value after {totals.y} years:
+    </div>
 
-          <p className="text-xs text-gray-600">
-            <span className="font-medium">Investment assumption:</span> Assumes the combined employee and employer
-            OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
-            assumption. Results are illustrative only and not financial advice.
-          </p>
-        </div>
+    <div className="text-3xl font-extrabold text-emerald-700">
+      {formatUSD(endingBalance)}
+    </div>
+
+    <div className="mt-1 text-sm text-gray-700">
+      Then withdraw {formatUSD(portfolioSeries.monthlyWithdrawal)} / month for{" "}
+      {AVG_REMAINING_YEARS_AT_67.toFixed(1)} years.
+    </div>
+
+    <div className="mt-1 text-sm text-gray-700">
+      Ending balance after withdrawals:{" "}
+      <span className="font-semibold">
+        {formatUSD(endingBalanceAfterRetirement)}
+      </span>
+    </div>
+
+    <div className="mt-1 text-xs text-gray-600">
+      Portfolio sustained withdrawals for{" "}
+      {Math.floor(portfolioSeries.monthsSustained / 12)}y{" "}
+      {portfolioSeries.monthsSustained % 12}m (out of{" "}
+      {Math.floor(portfolioSeries.retirementMonths / 12)}y{" "}
+      {portfolioSeries.retirementMonths % 12}m).
+    </div>
+  </div>
+
+  {/* Portfolio growth during work years + drawdown during retirement */}
+  <div className="w-full max-w-2xl aspect-[6/5] mx-auto mt-4">
+    <ResponsiveContainer width="100%" height="100%">
+      <AreaChart data={portfolioSeries.points} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+        <defs>
+          <linearGradient id="portfolioBalanceFill" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
+            <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
+          </linearGradient>
+        </defs>
+
+        <CartesianGrid strokeDasharray="3 3" vertical={false} />
+
+        <XAxis
+          dataKey="year"
+          ticks={xTicks}
+          interval={0}
+          tickFormatter={(v) => {
+            const first = xTicks[0];
+            if (first != null && Number(v) === first) return "Now";
+            return String(v);
+          }}
+          label={{ value: "Year", position: "insideBottom", offset: -5 }}
+        />
+
+        <YAxis domain={[0, yAxisMax]} tickFormatter={(v) => formatYAxisTick(Number(v))} />
+
+        <Tooltip
+          content={<CustomPortfolioTooltip />}
+          labelFormatter={(value) => {
+            const first = xTicks[0];
+            if (first != null && Number(value) === first) return "Now";
+            return `Year ${value}`;
+          }}
+        />
+
+        <Area
+          type="monotone"
+          dataKey="balance"
+          name="Portfolio balance"
+          stroke="#047857"
+          fill="url(#portfolioBalanceFill)"
+          dot={false}
+          activeDot={false}
+        />
+      </AreaChart>
+    </ResponsiveContainer>
+  </div>
+
+  <p className="text-xs text-gray-600">
+    <span className="font-medium">Investment assumption:</span> Assumes the combined employee and employer
+    OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
+    assumption. Results are illustrative only and not financial advice.
+  </p>
+</div>
+
       </div>
     </section>
 
