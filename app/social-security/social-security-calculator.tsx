@@ -1,16 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import {
-  XAxis,
-  YAxis,
-  Tooltip,
-  ResponsiveContainer,
-  CartesianGrid,
-  AreaChart,
-  Area,
-  Legend,
-} from "recharts";
+import { Tooltip } from "recharts";
 
 /**
  * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
@@ -577,71 +568,6 @@ onBlur={() => {
             <div className="mt-1 text-sm text-gray-700">
               Principal: {formatUSD(endingPrincipal)} {" · "} Interest: {formatUSD(endingInterest)}
             </div>
-          </div>
-
-          <div className="w-full max-w-2xl aspect-[6/5] mx-auto mt-4">
-            <ResponsiveContainer width="100%" height="100%">
-              <AreaChart data={investmentSeries} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                <defs>
-                  <linearGradient id="ssPrincipalFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#1D4ED8" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.03} />
-                  </linearGradient>
-                  <linearGradient id="ssInterestFill" x1="0" y1="0" x2="0" y2="1">
-                    <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
-                    <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
-                  </linearGradient>
-                </defs>
-
-                <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-                <XAxis
-                  dataKey="year"
-                  ticks={xTicks}
-                  interval={0}
-                  tickFormatter={(v) => {
-                    const first = xTicks[0];
-                    if (first != null && Number(v) === first) return "Now";
-                    return String(v);
-                  }}
-                  label={{ value: "Year", position: "insideBottom", offset: -5 }}
-                />
-
-                <YAxis domain={[0, yAxisMax]} tickFormatter={(v) => formatYAxisTick(Number(v))} />
-
-                <Tooltip
-                  content={<CustomSSInvestmentTooltip />}
-                  labelFormatter={(value) => {
-                    const first = xTicks[0];
-                    if (first != null && Number(value) === first) return "Now";
-                    return `Year ${value}`;
-                  }}
-                />
-
-                <Legend verticalAlign="bottom" align="right" iconType="square" />
-
-                <Area
-                  type="monotone"
-                  dataKey="principal"
-                  name="Total principal"
-                  stackId="1"
-                  stroke="#1D4ED8"
-                  fill="url(#ssPrincipalFill)"
-                  dot={false}
-                  activeDot={false}
-                />
-                <Area
-                  type="monotone"
-                  dataKey="interest"
-                  name="Total interest"
-                  stackId="1"
-                  stroke="#047857"
-                  fill="url(#ssInterestFill)"
-                  dot={false}
-                  activeDot={false}
-                />
-              </AreaChart>
-            </ResponsiveContainer>
           </div>
 
           <p className="text-xs text-gray-600">
