@@ -386,22 +386,47 @@ export default function SocialSecurityCalculator(props: Props) {
             min={1900}
             max={2100}
             value={startYearInput}
-            onChange={(e) => {
-              const v = e.target.value;
-              setStartYearInput(v);
+onChange={(e) => {
+  const v = e.target.value;
+  setStartYearInput(v);
 
-              if (v === "") return;
+  // Allow clearing while typing
+  if (v === "") return;
 
-              const n = Number(v);
-              if (Number.isNaN(n)) return;
+  // Allow partial typing like "2", "20", "202"
+  if (!/^\d{1,4}$/.test(v)) return;
 
-              const clamped = Math.max(1900, Math.min(2100, Math.floor(n)));
-              setStartYear(clamped);
-              setStartYearInput(String(clamped));
-            }}
-            onBlur={() => {
-              if (startYearInput === "") setStartYearInput(String(startYear));
-            }}
+  // Only commit to state once it looks like a full year
+  if (v.length < 4) return;
+
+  const n = Number(v);
+  if (Number.isNaN(n)) return;
+
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+
+  // Normalize displayed value if clamped
+  if (clamped !== n) setStartYearInput(String(clamped));
+}}
+onBlur={() => {
+  // If they leave it blank, snap back to last valid
+  if (startYearInput === "") {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  // If they leave a partial year (like "202"), snap back
+  if (!/^\d{4}$/.test(startYearInput)) {
+    setStartYearInput(String(startYear));
+    return;
+  }
+
+  const n = Number(startYearInput);
+  const clamped = Math.max(1900, Math.min(2100, n));
+  setStartYear(clamped);
+  setStartYearInput(String(clamped));
+}}
+
           />
         </label>
 
@@ -548,6 +573,6 @@ export default function SocialSecurityCalculator(props: Props) {
         </div>
       </div>
     </section>
-    
+
   );
 }
