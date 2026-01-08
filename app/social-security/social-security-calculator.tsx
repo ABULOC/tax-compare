@@ -548,5 +548,6 @@ export default function SocialSecurityCalculator(props: Props) {
         </div>
       </div>
     </section>
+    
   );
 }
