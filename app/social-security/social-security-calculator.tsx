@@ -667,14 +667,16 @@ onBlur={() => {
 
 <div className="my-4 h-px bg-gray-200" />
 
-<div className="text-sm text-gray-700">
+<div className="text-lg font-semibold">
   And if you continued investing while pulling out the same amount Social Security pays you,
   then you would have:
 </div>
 
-<div className="mt-1 text-xl font-bold text-gray-900">
+
+<div className="mt-1 text-3xl font-extrabold text-emerald-700">
   {formatUSD(endingBalanceAfterRetirement)}
 </div>
+
   </div>
 
   {/* Portfolio growth during work years + drawdown during retirement */}
