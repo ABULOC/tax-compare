@@ -26,6 +26,15 @@ export default function Home() {
           </Link>
 
           <div className="mt-3 text-sm text-gray-700">
+  Also explore:
+  {" "}
+  <Link href="/social-security" className="underline">
+    Social Security contributions calculator
+  </Link>
+</div>
+
+
+          <div className="mt-3 text-sm text-gray-700">
             <div className="font-medium text-gray-900">
               Popular comparisons
             </div>
@@ -33,7 +42,7 @@ export default function Home() {
             <ul className="mt-2 list-disc pl-5 space-y-1">
               <li>
                 <Link
-                  href="/compare/california-vs-texas"
+                  href="/compare"
                   className="underline"
                 >
                   California vs Texas tax comparison
@@ -41,7 +50,7 @@ export default function Home() {
               </li>
               <li>
                 <Link
-                  href="/compare/new-york-vs-florida"
+                  href="/compare"
                   className="underline"
                 >
                   New York vs Florida tax comparison
@@ -49,7 +58,7 @@ export default function Home() {
               </li>
               <li>
                 <Link
-                  href="/compare/illinois-vs-tennessee"
+                  href="/compare"
                   className="underline"
                 >
                   Illinois vs Tennessee tax comparison
