@@ -664,6 +664,21 @@ onBlur={() => {
       {formatUSD(endingBalance)}
     </div>
 
+
+<div className="my-4 h-px bg-gray-200" />
+
+<div className="text-sm text-gray-700">
+  And if you continued investing while pulling out the same amount Social Security pays you,
+  then you would have:
+</div>
+
+<div className="mt-1 text-xl font-bold text-gray-900">
+  {formatUSD(endingBalanceAfterRetirement)}
+</div>
+
+
+
+
     <div className="mt-1 text-sm text-gray-700">
       Then withdraw {formatUSD(portfolioSeries.monthlyWithdrawal)} / month for{" "}
       {AVG_REMAINING_YEARS_AT_67.toFixed(1)} years.
