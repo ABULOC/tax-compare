@@ -241,26 +241,6 @@ export default function SocialSecurityCalculator(props: Props) {
     return { years: y, start };
   }, [yearsWorked, startYear]);
 
-  const capCoverageNote = useMemo(() => {
-    const first = workingYears.start;
-    const last = workingYears.start + workingYears.years - 1;
-
-    const tooEarly = first < MIN_WAGE_BASE_YEAR;
-    const tooLate = last > MAX_WAGE_BASE_YEAR;
-
-    if (!tooEarly && !tooLate) return null;
-
-    if (tooEarly && tooLate) {
-      return `Wage caps are only built in for ${MIN_WAGE_BASE_YEAR}–${MAX_WAGE_BASE_YEAR}. Years outside that range use the nearest available cap.`;
-    }
-
-    if (tooEarly) {
-      return `Wage caps are only built in starting ${MIN_WAGE_BASE_YEAR}. Earlier years use the ${MIN_WAGE_BASE_YEAR} cap.`;
-    }
-
-    return `Wage caps are only built in through ${MAX_WAGE_BASE_YEAR}. Later years use the ${MAX_WAGE_BASE_YEAR} cap.`;
-  }, [workingYears.start, workingYears.years]);
-
   const totals = useMemo(() => {
     let totalEmployee = 0;
     let totalEmployer = 0;
@@ -456,12 +436,6 @@ onBlur={() => {
             }}
           />
         </label>
-
-        {capCoverageNote && (
-          <div className="text-xs text-amber-700 bg-amber-50 border border-amber-200 rounded px-3 py-2">
-            {capCoverageNote}
-          </div>
-        )}
       </div>
 
       <div className="rounded border p-4 space-y-3">
