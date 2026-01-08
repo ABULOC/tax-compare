@@ -345,18 +345,16 @@ export default function SocialSecurityCalculator(props: Props) {
     <section className="space-y-6">
       <div className="space-y-4">
         <label className="block">
-          <div className="font-medium">Annual income</div>
-          <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            type="text"
-            inputMode="numeric"
-            value={`$${formatNumberInput(income)}`}
-            onChange={(e) => setIncome(parseNumberInput(e.target.value))}
-          />
-          <div className="mt-1 text-xs text-gray-600">
-            Social Security applies only up to the wage base each year.
-          </div>
-        </label>
+  <div className="font-medium">Annual income</div>
+  <input
+    className="mt-1 w-full rounded border px-3 py-2"
+    type="text"
+    inputMode="numeric"
+    value={`$${formatNumberInput(income)}`}
+    onChange={(e) => setIncome(parseNumberInput(e.target.value))}
+  />
+</label>
+
 
         <label className="block">
           <div className="font-medium">Year you started working</div>
