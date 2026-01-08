@@ -1335,8 +1335,10 @@ export default function TaxCompareCalculator(props: Props) {
   const [homeValue, setHomeValue] = useState(props.initialHomeValue ?? 450000);
   const [stateA, setStateA] = useState<StateKey>(props.initialStateA ?? "IL");
   const [stateB, setStateB] = useState<StateKey>(props.initialStateB ?? "FL");
-  const [years, setYears] = useState(40);
-  const [yearsInput, setYearsInput] = useState("40");
+const [years, setYears] = useState(40);
+const [yearsInput, setYearsInput] = useState("40");
+
+
 
 
   const [filingStatus, setFilingStatus] = useState<FilingStatus>(
@@ -1584,22 +1586,38 @@ const yAxisMax = useMemo(() => {
 
         <h3 className="text-lg font-semibold">{investingTitle}</h3>
 
-        <label className="block">
-          <div className="font-medium">Years Invested</div>
-          <input
-            className="mt-1 w-full rounded border px-3 py-2"
-            type="number"
-            min={1}
-            max={50}
-            value={years}
-            onChange={(e) => {
-              const n = Number(e.target.value);
-              if (!Number.isNaN(n)) {
-                setYears(Math.max(1, Math.min(50, Math.floor(n))));
-              }
-            }}
-          />
-        </label>
+<label className="block">
+  <div className="font-medium">Years Invested</div>
+  <input
+    className="mt-1 w-full rounded border px-3 py-2"
+    type="number"
+    min={1}
+    max={50}
+    value={yearsInput}
+    onChange={(e) => {
+      const v = e.target.value;
+      setYearsInput(v);
+
+      // Allow the user to clear the field while typing
+      if (v === "") return;
+
+      const n = Number(v);
+      if (Number.isNaN(n)) return;
+
+      const clamped = Math.max(1, Math.min(50, Math.floor(n)));
+      setYears(clamped);
+      setYearsInput(String(clamped));
+
+    }}
+    onBlur={() => {
+      // If they leave it blank, snap back to the last valid value
+      if (yearsInput === "") {
+        setYearsInput(String(years));
+      }
+    }}
+  />
+</label>
+
 
         {annualDeltaAbs > 0 && (
           <>
