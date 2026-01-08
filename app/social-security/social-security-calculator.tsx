@@ -431,7 +431,7 @@ onBlur={() => {
         </label>
 
         <label className="block">
-          <div className="font-medium">Years worked</div>
+          <div className="font-medium">Total years worked (Or that you plan on working)</div>
           <input
             className="mt-1 w-full rounded border px-3 py-2"
             type="number"
