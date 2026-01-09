@@ -3,7 +3,8 @@ import Script from "next/script";
 import SocialSecurityCalculator from "./social-security-calculator";
 
 export const metadata: Metadata = {
-  title: "Social Security Value Calculator | Contributions vs Investing Comparison",
+  title:
+    "Social Security Value Calculator | Contributions vs Investing Comparison",
   description:
     "Estimate how much you and your employer paid into Social Security (OASDI) using historical wage caps and tax rates, estimate benefits at age 67, and compare to investing the same contributions at a hypothetical 10% annual return.",
   keywords: [
@@ -19,23 +20,34 @@ export const metadata: Metadata = {
     "COLA",
     "invest vs social security",
   ],
+
+  // ADD THIS
+  alternates: { canonical: "/social-security" },
+
   robots: {
     index: true,
     follow: true,
   },
+
   openGraph: {
     title: "Social Security Value Calculator",
     description:
       "Estimate OASDI contributions (employee + employer) with historical caps and rates, estimate benefits at age 67, and compare to investing contributions at 10%.",
     type: "website",
+
+    // ADD THIS
+    url: "/social-security",
   },
+
   twitter: {
-    card: "summary",
+    // OPTIONAL CHANGE: use large card if you will add an OG image later
+    card: "summary_large_image",
     title: "Social Security Value Calculator",
     description:
       "Estimate OASDI contributions and benefits at 67, then compare to investing the same contributions at 10%.",
   },
 };
+
 
 export default function SocialSecurityPage() {
   // JSON-LD FAQ schema for SEO

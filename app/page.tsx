@@ -7,13 +7,15 @@ export const metadata: Metadata = {
   description:
     "Use two calculators: (1) compare state income tax and property tax when moving between U.S. states, and (2) estimate the lifetime value of Social Security benefits versus investing OASDI contributions.",
   alternates: { canonical: "/" },
-  openGraph: {
-    title:
-      "True Tax Cost | State Tax Comparison Calculator + Social Security Value Calculator",
-    description:
-      "Compare state taxes (income tax + property tax) and estimate Social Security value versus investing. Two calculators built for relocation and retirement planning.",
-    type: "website",
-  },
+openGraph: {
+  title:
+    "True Tax Cost | State Tax Comparison Calculator + Social Security Value Calculator",
+  description:
+    "Compare state taxes (income tax + property tax) and estimate Social Security value versus investing. Two calculators built for relocation and retirement planning.",
+  type: "website",
+  url: "/",
+},
+
   twitter: {
     card: "summary",
     title:

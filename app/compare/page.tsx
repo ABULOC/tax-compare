@@ -1,20 +1,23 @@
-// app/calculator/page.tsx
+// app/compare/page.tsx
 import type { Metadata } from "next";
 import Script from "next/script";
 import TaxCompareCalculator from "./tax-compare-calculator";
 
 export const metadata: Metadata = {
-  title: "State Tax Comparison Calculator (Income + Property Tax) | Estimate Moving Savings",
+  title:
+    "State Tax Comparison Calculator (Income + Property Tax) | Estimate Moving Savings",
   description:
     "Compare estimated state income tax and property tax across U.S. states. Enter income, home value, filing status, and two states to see the annual difference and what investing that difference could grow into over time.",
   alternates: {
-    canonical: "/calculator",
+    // CHANGE: was /calculator
+    canonical: "/compare",
   },
   openGraph: {
     title: "State Tax Comparison Calculator",
     description:
       "Estimate and compare state income tax + property tax between two states, then project the long-term impact of investing the annual difference.",
-    url: "/calculator",
+    // CHANGE: was /calculator
+    url: "/compare",
     type: "website",
   },
   twitter: {
@@ -37,7 +40,8 @@ export const metadata: Metadata = {
 };
 
 function jsonLd() {
-  const url = "https://YOUR_DOMAIN.com/calculator";
+  // CHANGE: use your real domain and /compare
+  const url = "https://truetaxcost.com/compare";
 
   const softwareApp = {
     "@context": "https://schema.org",
@@ -95,15 +99,15 @@ function jsonLd() {
             "It takes the annual tax difference between the two states, invests it monthly, and compounds monthly using a long-term annual return assumption (currently 10%). The projection is illustrative only and not financial advice.",
         },
       },
-{
-  "@type": "Question",
-  name: "Do state tax rules change over time?",
-  acceptedAnswer: {
-    "@type": "Answer",
-    text:
-      "Yes. State tax brackets, rates, deductions, surtaxes, and property tax rules change frequently due to new legislation and annual adjustments. This calculator uses a recent snapshot for comparison purposes, but users should always verify results with official state sources or a tax professional.",
-  },
-}, 
+      {
+        "@type": "Question",
+        name: "Do state tax rules change over time?",
+        acceptedAnswer: {
+          "@type": "Answer",
+          text:
+            "Yes. State tax brackets, rates, deductions, surtaxes, and property tax rules change frequently due to new legislation and annual adjustments. This calculator uses a recent snapshot for comparison purposes, but users should always verify results with official state sources or a tax professional.",
+        },
+      },
     ],
   };
 
@@ -118,14 +122,11 @@ export default function ComparePage() {
       <Script
         id="structured-data"
         type="application/ld+json"
-        // JSON-LD must be a single JSON string. Using an array is allowed.
         dangerouslySetInnerHTML={{ __html: JSON.stringify(structuredData) }}
       />
 
       <header className="space-y-3">
-        <h1 className="text-3xl font-bold">
-          State Tax Comparison Calculator
-        </h1>
+        <h1 className="text-3xl font-bold">State Tax Comparison Calculator</h1>
 
         <p className="text-gray-700">
           Compare estimated <strong>state income tax</strong> and{" "}
@@ -294,24 +295,23 @@ export default function ComparePage() {
           </p>
         </details>
 
-<details className="rounded border p-4">
-  <summary className="font-medium cursor-pointer">
-    How accurate is this tax data over time?
-  </summary>
-  <p className="text-gray-700 mt-2">
-    State tax laws, brackets, deductions, and property tax rules change
-    frequently due to legislation, inflation adjustments, and local policy.
-    This calculator reflects a snapshot based on recent publicly available
-    information, but it may not always reflect the most current law.
-  </p>
-  <p className="text-gray-700 mt-2">
-    You should always double check results against official state tax
-    authorities or a qualified tax professional before making financial or
-    relocation decisions.
-  </p>
-</details>
-
-
+        <details className="rounded border p-4">
+          <summary className="font-medium cursor-pointer">
+            How accurate is this tax data over time?
+          </summary>
+          <p className="text-gray-700 mt-2">
+            State tax laws, brackets, deductions, and property tax rules change
+            frequently due to legislation, inflation adjustments, and local
+            policy. This calculator reflects a snapshot based on recent publicly
+            available information, but it may not always reflect the most
+            current law.
+          </p>
+          <p className="text-gray-700 mt-2">
+            You should always double check results against official state tax
+            authorities or a qualified tax professional before making financial
+            or relocation decisions.
+          </p>
+        </details>
       </section>
     </main>
   );
