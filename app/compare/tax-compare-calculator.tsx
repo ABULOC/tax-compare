@@ -12,7 +12,6 @@ import {
   Legend,
 } from "recharts";
 
-
 export type StateKey =
   | "AZ" | "CA" | "CO" | "FL" | "GA"
   | "IL" | "NV" | "NY" | "TX" | "WA"
@@ -25,9 +24,6 @@ export type StateKey =
   | "NE" | "NM" | "ND" | "OH" | "OK"
   | "RI" | "SC" | "VA" | "VT" | "WV";
 
-
-
-
 export type FilingStatus = "SINGLE" | "MFJ" | "HOH";
 
 const FILING_STATUSES: { key: FilingStatus; name: string }[] = [
@@ -36,6 +32,62 @@ const FILING_STATUSES: { key: FilingStatus; name: string }[] = [
   { key: "HOH", name: "Head of household" },
 ];
 
+/**
+ * Statewide effective property tax rates (as a single statewide average).
+ * Source basis: Business Insider "Effective Tax Rate" table (paid in 2023; published as 2024 property tax rates by state).
+ */
+const PROPERTY_TAX_RATES_EFFECTIVE: Record<StateKey, number> = {
+  AL: 0.0040,
+  AK: 0.0104,
+  AZ: 0.0063,
+  AR: 0.0064,
+  CA: 0.0075,
+  CO: 0.0055,
+  CT: 0.0179,
+  DE: 0.0061,
+  FL: 0.0091,
+  GA: 0.0092,
+  HI: 0.0032,
+  ID: 0.0067,
+  IL: 0.0208,
+  IN: 0.0084,
+  IA: 0.0152,
+  KS: 0.0134,
+  KY: 0.0083,
+  LA: 0.0056,
+  ME: 0.0124,
+  MD: 0.0105,
+  MA: 0.0114,
+  MI: 0.0138,
+  MN: 0.0111,
+  MS: 0.0067,
+  MO: 0.0101,
+  MT: 0.0074,
+  NE: 0.0163,
+  NV: 0.0059,
+  NH: 0.0193,
+  NJ: 0.0223,
+  NM: 0.0067,
+  NY: 0.0140,
+  NC: 0.0082,
+  ND: 0.0098,
+  OH: 0.0159,
+  OK: 0.0089,
+  OR: 0.0093,
+  PA: 0.0149,
+  RI: 0.0140,
+  SC: 0.0057,
+  SD: 0.0117,
+  TN: 0.0067,
+  TX: 0.0168,
+  UT: 0.0057,
+  VA: 0.0087,
+  VT: 0.0183,
+  WA: 0.0087,
+  WV: 0.0057,
+  WI: 0.0161,
+  WY: 0.0056,
+};
 
 function getStateTaxableIncome(
   state: StateKey,
@@ -48,10 +100,6 @@ function getStateTaxableIncome(
 
   return Math.max(0, grossIncome - deduction);
 }
-
-
-
-
 
 type TaxBracket = {
   /** Upper bound for this bracket (inclusive). Use null for “no upper bound”. */
@@ -82,7 +130,6 @@ function calcProgressiveTax(taxableIncome: number, brackets: TaxBracket[]) {
 
   return tax;
 }
-
 
 type StateTaxRule = {
   name: string;
@@ -167,7 +214,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
   CO: {
     name: "Colorado",
     propertyTaxRate: 0.0049,
-    incomeTax: { flatRate: 0.044 },
+    incomeTax: { flatRate: 0.0425 },
   },
   FL: {
     name: "Florida",
@@ -178,7 +225,8 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Georgia",
     propertyTaxRate: 0.0083,
     incomeTax: {
-      flatRate: 0.0519,
+      // 2026 flat rate
+      flatRate: 0.0509,
       standardDeductionByStatus: {
         SINGLE: 12_000,
         MFJ: 24_000,
@@ -202,7 +250,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
   NC: {
     name: "North Carolina",
     propertyTaxRate: 0.0078,
-    incomeTax: { flatRate: 0.045 },
+    incomeTax: { flatRate: 0.0399 },
   },
   NJ: {
     name: "New Jersey",
@@ -312,7 +360,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     incomeTax: null,
   },
 
-    AL: {
+  AL: {
     name: "Alabama",
     propertyTaxRate: 0.0038,
     incomeTax: {
@@ -340,8 +388,8 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Arkansas",
     propertyTaxRate: 0.0059,
     incomeTax: {
+      // Uses the <= $92,300 table as a single progressive schedule in this model.
       bracketsByStatus: {
-        // Uses the <= $92,300 table as a single progressive schedule in this model.
         SINGLE: [
           { upTo: 5_499, rate: 0.0 },
           { upTo: 10_899, rate: 0.02 },
@@ -447,7 +495,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Hawaii",
     propertyTaxRate: 0.0027,
     incomeTax: {
-              standardDeductionByStatus: {
+      standardDeductionByStatus: {
         SINGLE: 4_400,
         MFJ: 8_800,
         HOH: 6_424,
@@ -532,7 +580,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Indiana",
     propertyTaxRate: 0.0077,
     incomeTax: {
-      flatRate: 0.03,
+      flatRate: 0.0295,
     },
   },
 
@@ -540,27 +588,23 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Kansas",
     propertyTaxRate: 0.0134,
     incomeTax: {
-              standardDeductionByStatus: {
+      standardDeductionByStatus: {
         SINGLE: 3_605,
         MFJ: 8_240,
         HOH: 6_180,
       },
-
       bracketsByStatus: {
         SINGLE: [
-          { upTo: 15_000, rate: 0.031 },
-          { upTo: 30_000, rate: 0.0525 },
-          { upTo: null, rate: 0.057 },
+          { upTo: 23_000, rate: 0.052 },
+          { upTo: null, rate: 0.0558 },
         ],
         MFJ: [
-          { upTo: 30_000, rate: 0.031 },
-          { upTo: 60_000, rate: 0.0525 },
-          { upTo: null, rate: 0.057 },
+          { upTo: 46_000, rate: 0.052 },
+          { upTo: null, rate: 0.0558 },
         ],
         HOH: [
-          { upTo: 15_000, rate: 0.031 },
-          { upTo: 30_000, rate: 0.0525 },
-          { upTo: null, rate: 0.057 },
+          { upTo: 23_000, rate: 0.052 },
+          { upTo: null, rate: 0.0558 },
         ],
       },
     },
@@ -574,8 +618,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     },
   },
 
-
-    AK: {
+  AK: {
     name: "Alaska",
     propertyTaxRate: 0.0107,
     incomeTax: null,
@@ -585,7 +628,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Louisiana",
     propertyTaxRate: 0.0055,
     incomeTax: {
-      flatRate: 0.03, // flat 3% for tax periods beginning on/after Jan 1, 2025
+      flatRate: 0.03,
     },
   },
 
@@ -620,7 +663,6 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Mississippi",
     propertyTaxRate: 0.007,
     incomeTax: {
-      // Mississippi publishes rates as "excess of $10,000 taxed at X%"
       bracketsByStatus: {
         SINGLE: [
           { upTo: 10_000, rate: 0.0 },
@@ -641,7 +683,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
   NH: {
     name: "New Hampshire",
     propertyTaxRate: 0.0161,
-    incomeTax: null, // no tax on W-2 wages
+    incomeTax: null,
   },
 
   OR: {
@@ -649,7 +691,6 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     propertyTaxRate: 0.0077,
     incomeTax: {
       bracketsByStatus: {
-        // 2025 OR-40 full-year resident tables and rate charts
         SINGLE: [
           { upTo: 4_400, rate: 0.0475 },
           { upTo: 11_200, rate: 0.0675 },
@@ -687,7 +728,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Utah",
     propertyTaxRate: 0.0047,
     incomeTax: {
-      flatRate: 0.0455, // Jan 1, 2024 – current
+      flatRate: 0.0455,
     },
   },
 
@@ -696,7 +737,6 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     propertyTaxRate: 0.0125,
     incomeTax: {
       bracketsByStatus: {
-        // 2025 WI bracket thresholds
         SINGLE: [
           { upTo: 14_679, rate: 0.035 },
           { upTo: 50_479, rate: 0.044 },
@@ -725,22 +765,24 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     incomeTax: null,
   },
 
-
-
-    KY: {
+  KY: {
     name: "Kentucky",
     propertyTaxRate: 0.0074,
-    incomeTax: { flatRate: 0.035 }, // tax year 2026 withholding rate
+    incomeTax: {
+      flatRate: 0.035,
+      standardDeductionByStatus: {
+        SINGLE: 3_360,
+        MFJ: 3_360,
+        HOH: 3_360,
+      },
+    },
   },
 
   MD: {
     name: "Maryland",
     propertyTaxRate: 0.0095,
     incomeTax: {
-      // NOTE: Maryland also has county/local income taxes. This model is STATE-ONLY.
-      // The state has progressive rates up through 5.75%, plus new high-income brackets.
-      // For full fidelity you’d want the complete official bracket table; this keeps the
-      // high-income changes and approximates the lower tiers.
+      // STATE-ONLY. County/local income taxes are not included.
       bracketsByStatus: {
         SINGLE: [
           { upTo: 1_000, rate: 0.02 },
@@ -750,9 +792,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
           { upTo: 125_000, rate: 0.05 },
           { upTo: 150_000, rate: 0.0525 },
           { upTo: 250_000, rate: 0.055 },
-          { upTo: 500_000, rate: 0.0575 },
-          { upTo: 1_000_000, rate: 0.0625 },
-          { upTo: null, rate: 0.065 },
+          { upTo: null, rate: 0.0575 },
         ],
         MFJ: [
           { upTo: 1_000, rate: 0.02 },
@@ -762,9 +802,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
           { upTo: 175_000, rate: 0.05 },
           { upTo: 225_000, rate: 0.0525 },
           { upTo: 300_000, rate: 0.055 },
-          { upTo: 600_000, rate: 0.0575 },
-          { upTo: 1_200_000, rate: 0.0625 },
-          { upTo: null, rate: 0.065 },
+          { upTo: null, rate: 0.0575 },
         ],
         HOH: [
           { upTo: 1_000, rate: 0.02 },
@@ -774,9 +812,7 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
           { upTo: 175_000, rate: 0.05 },
           { upTo: 225_000, rate: 0.0525 },
           { upTo: 300_000, rate: 0.055 },
-          { upTo: 600_000, rate: 0.0575 },
-          { upTo: 1_200_000, rate: 0.0625 },
-          { upTo: null, rate: 0.065 },
+          { upTo: null, rate: 0.0575 },
         ],
       },
       standardDeductionByStatus: {
@@ -820,7 +856,6 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Missouri",
     propertyTaxRate: 0.0088,
     incomeTax: {
-      // Same rate chart used here for all statuses in this simplified model.
       bracketsByStatus: {
         SINGLE: [
           { upTo: 1_313, rate: 0.0 },
@@ -862,16 +897,16 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     incomeTax: {
       bracketsByStatus: {
         SINGLE: [
-          { upTo: 21_100, rate: 0.047 },
-          { upTo: null, rate: 0.059 },
+          { upTo: 47_500, rate: 0.047 },
+          { upTo: null, rate: 0.0565 },
         ],
         MFJ: [
-          { upTo: 42_200, rate: 0.047 },
-          { upTo: null, rate: 0.059 },
+          { upTo: 95_000, rate: 0.047 },
+          { upTo: null, rate: 0.0565 },
         ],
         HOH: [
-          { upTo: 21_100, rate: 0.047 },
-          { upTo: null, rate: 0.059 },
+          { upTo: 71_250, rate: 0.047 },
+          { upTo: null, rate: 0.0565 },
         ],
       },
     },
@@ -885,20 +920,20 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
         SINGLE: [
           { upTo: 4_030, rate: 0.0246 },
           { upTo: 24_120, rate: 0.0351 },
-          { upTo: 38_870, rate: 0.0501 },
-          { upTo: null, rate: 0.052 },
+          { upTo: 38_870, rate: 0.0455 },
+          { upTo: null, rate: 0.0455 },
         ],
         MFJ: [
           { upTo: 8_040, rate: 0.0246 },
           { upTo: 48_250, rate: 0.0351 },
-          { upTo: 77_730, rate: 0.0501 },
-          { upTo: null, rate: 0.052 },
+          { upTo: 77_730, rate: 0.0455 },
+          { upTo: null, rate: 0.0455 },
         ],
         HOH: [
           { upTo: 7_510, rate: 0.0246 },
           { upTo: 38_590, rate: 0.0351 },
-          { upTo: 57_630, rate: 0.0501 },
-          { upTo: null, rate: 0.052 },
+          { upTo: 57_630, rate: 0.0455 },
+          { upTo: null, rate: 0.0455 },
         ],
       },
     },
@@ -962,22 +997,19 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Ohio",
     propertyTaxRate: 0.0131,
     incomeTax: {
-      // NOTE: Ohio also has many local/municipal income taxes. This is STATE-ONLY.
+      // STATE-ONLY (Ohio local/municipal income taxes not included)
       bracketsByStatus: {
         SINGLE: [
           { upTo: 26_050, rate: 0.0 },
-          { upTo: 100_000, rate: 0.0275 },
-          { upTo: null, rate: 0.03125 },
+          { upTo: null, rate: 0.0275 },
         ],
         MFJ: [
           { upTo: 26_050, rate: 0.0 },
-          { upTo: 100_000, rate: 0.0275 },
-          { upTo: null, rate: 0.03125 },
+          { upTo: null, rate: 0.0275 },
         ],
         HOH: [
           { upTo: 26_050, rate: 0.0 },
-          { upTo: 100_000, rate: 0.0275 },
-          { upTo: null, rate: 0.03125 },
+          { upTo: null, rate: 0.0275 },
         ],
       },
     },
@@ -992,31 +1024,25 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
         MFJ: 12_700,
         HOH: 9_350,
       },
-
+      // 2026 brackets per Oklahoma Tax Commission legislative update
       bracketsByStatus: {
         SINGLE: [
-          { upTo: 1_000, rate: 0.0025 },
-          { upTo: 2_500, rate: 0.0075 },
-          { upTo: 3_750, rate: 0.0175 },
-          { upTo: 4_900, rate: 0.0275 },
-          { upTo: 7_200, rate: 0.0375 },
-          { upTo: null, rate: 0.0475 },
+          { upTo: 3_750, rate: 0.0 },
+          { upTo: 4_900, rate: 0.025 },
+          { upTo: 7_200, rate: 0.035 },
+          { upTo: null, rate: 0.045 },
         ],
         MFJ: [
-          { upTo: 2_000, rate: 0.0025 },
-          { upTo: 5_000, rate: 0.0075 },
-          { upTo: 7_500, rate: 0.0175 },
-          { upTo: 9_800, rate: 0.0275 },
-          { upTo: 12_200, rate: 0.0375 },
-          { upTo: null, rate: 0.0475 },
+          { upTo: 7_500, rate: 0.0 },
+          { upTo: 9_800, rate: 0.025 },
+          { upTo: 14_400, rate: 0.035 },
+          { upTo: null, rate: 0.045 },
         ],
         HOH: [
-          { upTo: 1_000, rate: 0.0025 },
-          { upTo: 2_500, rate: 0.0075 },
-          { upTo: 3_750, rate: 0.0175 },
-          { upTo: 4_900, rate: 0.0275 },
-          { upTo: 7_200, rate: 0.0375 },
-          { upTo: null, rate: 0.0475 },
+          { upTo: 7_500, rate: 0.0 },
+          { upTo: 9_800, rate: 0.025 },
+          { upTo: 14_400, rate: 0.035 },
+          { upTo: null, rate: 0.045 },
         ],
       },
     },
@@ -1026,13 +1052,11 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Rhode Island",
     propertyTaxRate: 0.0105,
     incomeTax: {
-              standardDeductionByStatus: {
+      standardDeductionByStatus: {
         SINGLE: 10_900,
         MFJ: 21_800,
         HOH: 16_350,
       },
-
-      // RI uses one schedule (thresholds vary by filing status in law, but the published schedule is uniform)
       bracketsByStatus: {
         SINGLE: [
           { upTo: 79_900, rate: 0.0375 },
@@ -1057,13 +1081,11 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "South Carolina",
     propertyTaxRate: 0.0046,
     incomeTax: {
-      // SC’s exact computation is table-based and changing; this is a simplified progressive approximation.
-      // If you want table-exact output, we’d implement SC1040TT lookups instead of brackets.
       bracketsByStatus: {
         SINGLE: [
           { upTo: 3_600, rate: 0.0 },
           { upTo: 17_830, rate: 0.03 },
-          { upTo: null, rate: 0.06 }, // tax year 2025 top marginal rate
+          { upTo: null, rate: 0.06 },
         ],
         MFJ: [
           { upTo: 3_600, rate: 0.0 },
@@ -1083,14 +1105,12 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
     name: "Virginia",
     propertyTaxRate: 0.0077,
     incomeTax: {
-              standardDeductionByStatus: {
+      standardDeductionByStatus: {
         SINGLE: 8_750,
         MFJ: 17_500,
         HOH: 8_750,
       },
-
       bracketsByStatus: {
-        // Virginia’s rate schedule is the same for all filing statuses in this simplified model.
         SINGLE: [
           { upTo: 3_000, rate: 0.02 },
           { upTo: 5_000, rate: 0.03 },
@@ -1169,20 +1189,16 @@ export const STATE_TAX_RULES: Record<StateKey, StateTaxRule> = {
       },
     },
   },
-
-
-
 };
 
-
-
-
-
-
+// Override property tax rates to the statewide effective rates above
+(Object.keys(STATE_TAX_RULES) as StateKey[]).forEach((k) => {
+  STATE_TAX_RULES[k].propertyTaxRate = PROPERTY_TAX_RATES_EFFECTIVE[k];
+});
 
 /**
- * State income tax (single filer approximation, state-only).
- * IMPORTANT: Your UI input currently represents taxable income for simplicity.
+ * State income tax (state-only).
+ * Note: This uses "taxableIncome" as computed by getStateTaxableIncome (gross income minus any modeled standard deduction).
  */
 function calculateStateIncomeTax(
   state: StateKey,
@@ -1212,9 +1228,6 @@ function calculateStateIncomeTax(
   return base + surtaxTotal;
 }
 
-
-
-
 const STATES: { key: StateKey; name: string }[] = (
   Object.keys(STATE_TAX_RULES) as StateKey[]
 )
@@ -1228,7 +1241,6 @@ function formatUSD(n: number) {
     maximumFractionDigits: 0,
   }).format(n);
 }
-
 
 // Add these helpers (NEW)
 function formatNumberInput(n: number) {
@@ -1253,10 +1265,7 @@ function formatYAxisTick(v: number) {
 
   const m = n / 1_000_000;
 
-  // Show 1 decimal under 10mm to avoid duplicate labels like "2mm" at 1.5mm
   const str = m < 10 ? m.toFixed(1) : Math.round(m).toString();
-
-  // Strip trailing .0
   const cleaned = str.endsWith(".0") ? str.slice(0, -2) : str;
 
   return `$${cleaned}mm`;
@@ -1320,8 +1329,6 @@ function CustomInvestmentTooltip({
   );
 }
 
-
-
 type Props = {
   initialIncome?: number;
   initialHomeValue?: number;
@@ -1335,116 +1342,102 @@ export default function TaxCompareCalculator(props: Props) {
   const [homeValue, setHomeValue] = useState(props.initialHomeValue ?? 450000);
   const [stateA, setStateA] = useState<StateKey>(props.initialStateA ?? "IL");
   const [stateB, setStateB] = useState<StateKey>(props.initialStateB ?? "FL");
-const [years, setYears] = useState(40);
-const [yearsInput, setYearsInput] = useState("40");
-
-
-
+  const [years, setYears] = useState(40);
+  const [yearsInput, setYearsInput] = useState("40");
 
   const [filingStatus, setFilingStatus] = useState<FilingStatus>(
-  props.initialFilingStatus ?? "SINGLE"
-);
-
-
-const r = useMemo(() => {
-  const aTaxableIncome = getStateTaxableIncome(stateA, filingStatus, income);
-  const bTaxableIncome = getStateTaxableIncome(stateB, filingStatus, income);
-
-  const aIncomeTax = calculateStateIncomeTax(
-    stateA,
-    filingStatus,
-    aTaxableIncome
+    props.initialFilingStatus ?? "SINGLE"
   );
-  const aPropertyTax = homeValue * STATE_TAX_RULES[stateA].propertyTaxRate;
-  const aTotal = aIncomeTax + aPropertyTax;
 
+  const r = useMemo(() => {
+    const aTaxableIncome = getStateTaxableIncome(stateA, filingStatus, income);
+    const bTaxableIncome = getStateTaxableIncome(stateB, filingStatus, income);
 
-  const bIncomeTax = calculateStateIncomeTax(
-    stateB,
-    filingStatus,
-    bTaxableIncome
-  );
-  const bPropertyTax = homeValue * STATE_TAX_RULES[stateB].propertyTaxRate;
-  const bTotal = bIncomeTax + bPropertyTax;
+    const aIncomeTax = calculateStateIncomeTax(
+      stateA,
+      filingStatus,
+      aTaxableIncome
+    );
+    const aPropertyTax = homeValue * STATE_TAX_RULES[stateA].propertyTaxRate;
+    const aTotal = aIncomeTax + aPropertyTax;
 
+    const bIncomeTax = calculateStateIncomeTax(
+      stateB,
+      filingStatus,
+      bTaxableIncome
+    );
+    const bPropertyTax = homeValue * STATE_TAX_RULES[stateB].propertyTaxRate;
+    const bTotal = bIncomeTax + bPropertyTax;
 
+    return {
+      aIncomeTax,
+      aPropertyTax,
+      aTotal,
 
-return {
-  aIncomeTax,
-  aPropertyTax,
-  aTotal,
+      bIncomeTax,
+      bPropertyTax,
+      bTotal,
 
-  bIncomeTax,
-  bPropertyTax,
-  bTotal,
-
-  delta: bTotal - aTotal,
-};
-
+      delta: bTotal - aTotal,
+    };
   }, [income, homeValue, stateA, stateB, filingStatus]);
-
 
   const deltaAbs = Math.abs(r.delta);
 
   const annualDeltaAbs = Math.abs(r.delta);
   const annualReturn = 0.1;
 
-// Monthly compounding based on the effective annual return
-const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
-const monthlyContribution = annualDeltaAbs / 12;
+  // Monthly compounding based on the effective annual return
+  const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
+  const monthlyContribution = annualDeltaAbs / 12;
 
+  const investmentSeries = useMemo(() => {
+    const nYears = Math.max(1, Math.min(100, Math.floor(years)));
+    const startYear = new Date().getFullYear();
 
-const investmentSeries = useMemo(() => {
-  const nYears = Math.max(1, Math.min(100, Math.floor(years)));
-  const startYear = new Date().getFullYear();
+    let balance = 0;
+    let contributed = 0;
 
-  let balance = 0;
-  let contributed = 0;
+    const points: {
+      year: number;
+      balance: number;
+      principal: number;
+      interest: number;
+    }[] = [{ year: startYear, balance: 0, principal: 0, interest: 0 }];
 
-  const points: {
-    year: number;
-    balance: number;
-    principal: number;
-    interest: number;
-  }[] = [{ year: startYear, balance: 0, principal: 0, interest: 0 }];
+    const totalMonths = nYears * 12;
 
-  const totalMonths = nYears * 12;
+    for (let m = 1; m <= totalMonths; m += 1) {
+      balance = balance * (1 + monthlyReturn) + monthlyContribution;
+      contributed += monthlyContribution;
 
-  for (let m = 1; m <= totalMonths; m += 1) {
-    balance = balance * (1 + monthlyReturn) + monthlyContribution;
-    contributed += monthlyContribution;
-
-    if (m % 12 === 0) {
-      const y = m / 12;
-      points.push({
-        year: startYear + y,
-        balance,
-        principal: contributed,
-        interest: Math.max(0, balance - contributed),
-      });
+      if (m % 12 === 0) {
+        const y = m / 12;
+        points.push({
+          year: startYear + y,
+          balance,
+          principal: contributed,
+          interest: Math.max(0, balance - contributed),
+        });
+      }
     }
-  }
 
-  return points;
-}, [years, monthlyContribution, monthlyReturn]);
-
-
+    return points;
+  }, [years, monthlyContribution, monthlyReturn]);
 
   const xTicks = useMemo(() => {
-  const first = investmentSeries[0]?.year;
-  const last = investmentSeries[investmentSeries.length - 1]?.year;
-  if (first == null || last == null) return [];
+    const first = investmentSeries[0]?.year;
+    const last = investmentSeries[investmentSeries.length - 1]?.year;
+    if (first == null || last == null) return [];
 
-  const mid = first + Math.floor((last - first) / 2);
-  return [first, mid, last];
-}, [investmentSeries]);
+    const mid = first + Math.floor((last - first) / 2);
+    return [first, mid, last];
+  }, [investmentSeries]);
 
-
-const investingTitle =
-  r.delta !== 0
-    ? "If you invest those savings this is how much more you can have:"
-    : "Total interest";
-
+  const investingTitle =
+    r.delta !== 0
+      ? "If you invest those savings this is how much more you can have:"
+      : "Total interest";
 
   const investingSubtitle =
     r.delta < 0
@@ -1453,13 +1446,10 @@ const investingTitle =
       ? `${stateB} costs more per year than ${stateA}. This shows what that difference could grow into if invested.`
       : "There is no annual difference between these states based on this estimate.";
 
-
-const yAxisMax = useMemo(() => {
-  const max = Math.max(...investmentSeries.map((p) => p.balance));
-  return max * 1.1;
-}, [investmentSeries]);
-
-
+  const yAxisMax = useMemo(() => {
+    const max = Math.max(...investmentSeries.map((p) => p.balance));
+    return max * 1.1;
+  }, [investmentSeries]);
 
   return (
     <section className="space-y-4">
@@ -1492,22 +1482,20 @@ const yAxisMax = useMemo(() => {
           />
         </label>
 
-
         <label className="block">
-  <div className="font-medium">Filing status</div>
-  <select
-    className="mt-1 w-full rounded border px-3 py-2"
-    value={filingStatus}
-    onChange={(e) => setFilingStatus(e.target.value as FilingStatus)}
-  >
-    {FILING_STATUSES.map((fs) => (
-      <option key={fs.key} value={fs.key}>
-        {fs.name}
-      </option>
-    ))}
-  </select>
-</label>
-
+          <div className="font-medium">Filing status</div>
+          <select
+            className="mt-1 w-full rounded border px-3 py-2"
+            value={filingStatus}
+            onChange={(e) => setFilingStatus(e.target.value as FilingStatus)}
+          >
+            {FILING_STATUSES.map((fs) => (
+              <option key={fs.key} value={fs.key}>
+                {fs.name}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <label className="block">
@@ -1549,18 +1537,15 @@ const yAxisMax = useMemo(() => {
           <div>
             <div className="font-semibold mb-1">{stateA}</div>
             <div>Income tax: {formatUSD(r.aIncomeTax)}</div>
-<div>Property tax: {formatUSD(r.aPropertyTax)}</div>
-<div className="mt-2 font-bold">Total: {formatUSD(r.aTotal)}</div>
-
+            <div>Property tax: {formatUSD(r.aPropertyTax)}</div>
+            <div className="mt-2 font-bold">Total: {formatUSD(r.aTotal)}</div>
           </div>
 
           <div>
             <div className="font-semibold mb-1">{stateB}</div>
             <div>Income tax: {formatUSD(r.bIncomeTax)}</div>
-<div>Property tax: {formatUSD(r.bPropertyTax)}</div>
-<div className="mt-2 font-bold">Total: {formatUSD(r.bTotal)}</div>
-
-
+            <div>Property tax: {formatUSD(r.bPropertyTax)}</div>
+            <div className="mt-2 font-bold">Total: {formatUSD(r.bTotal)}</div>
           </div>
         </div>
 
@@ -1586,126 +1571,120 @@ const yAxisMax = useMemo(() => {
 
         <h3 className="text-lg font-semibold">{investingTitle}</h3>
 
-<label className="block">
-  <div className="font-medium">Years Invested</div>
-  <input
-    className="mt-1 w-full rounded border px-3 py-2"
-    type="number"
-    min={1}
-    max={100}
-    value={yearsInput}
-    onChange={(e) => {
-      const v = e.target.value;
-      setYearsInput(v);
+        <label className="block">
+          <div className="font-medium">Years Invested</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="number"
+            min={1}
+            max={100}
+            value={yearsInput}
+            onChange={(e) => {
+              const v = e.target.value;
+              setYearsInput(v);
 
-      // Allow the user to clear the field while typing
-      if (v === "") return;
+              if (v === "") return;
 
-      const n = Number(v);
-      if (Number.isNaN(n)) return;
+              const n = Number(v);
+              if (Number.isNaN(n)) return;
 
-      const clamped = Math.max(1, Math.min(100, Math.floor(n)));
-      setYears(clamped);
-      setYearsInput(String(clamped));
+              const clamped = Math.max(1, Math.min(100, Math.floor(n)));
+              setYears(clamped);
+              setYearsInput(String(clamped));
+            }}
+            onBlur={() => {
+              if (yearsInput === "") {
+                setYearsInput(String(years));
+              }
+            }}
+          />
+        </label>
 
-    }}
-    onBlur={() => {
-      // If they leave it blank, snap back to the last valid value
-      if (yearsInput === "") {
-        setYearsInput(String(years));
-      }
-    }}
-  />
-</label>
-
+        <div className="text-sm text-gray-600">{investingSubtitle}</div>
 
         {annualDeltaAbs > 0 && (
           <>
+            <div className="text-center">
+              <div className="text-sm text-gray-600">
+                Moving could increase your networth by:
+              </div>
+              <div className="text-3xl font-extrabold text-emerald-700">
+                {formatUSD(
+                  investmentSeries[investmentSeries.length - 1]?.balance ?? 0
+                )}
+              </div>
+            </div>
 
-
-<div className="text-center">
-  <div className="text-sm text-gray-600">Moving could increase your networth by:</div>
-  <div className="text-3xl font-extrabold text-emerald-700">
-    {formatUSD(investmentSeries[investmentSeries.length - 1]?.balance ?? 0)}
-  </div>
-</div>
-
-
-
-<div className="w-full max-w-2xl aspect-[6/5] mx-auto">
-
+            <div className="w-full max-w-2xl aspect-[6/5] mx-auto">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={investmentSeries} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-  <defs>
-    <linearGradient id="principalFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor="#1D4ED8" stopOpacity={0.25} />
-      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.03} />
-    </linearGradient>
-    <linearGradient id="interestFill" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
-      <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
-    </linearGradient>
-  </defs>
+                <AreaChart
+                  data={investmentSeries}
+                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                >
+                  <defs>
+                    <linearGradient id="principalFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#1D4ED8" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#1D4ED8" stopOpacity={0.03} />
+                    </linearGradient>
+                    <linearGradient id="interestFill" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
+                      <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
+                    </linearGradient>
+                  </defs>
 
-  <CartesianGrid strokeDasharray="3 3" vertical={false} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-<XAxis
-  dataKey="year"
-  ticks={xTicks}
-  interval={0}
-  tickFormatter={(v) => {
-    const first = xTicks[0];
-    if (first != null && Number(v) === first) return "Now";
-    return String(v);
-  }}
-  label={{ value: "Year", position: "insideBottom", offset: -5 }}
-/>
+                  <XAxis
+                    dataKey="year"
+                    ticks={xTicks}
+                    interval={0}
+                    tickFormatter={(v) => {
+                      const first = xTicks[0];
+                      if (first != null && Number(v) === first) return "Now";
+                      return String(v);
+                    }}
+                    label={{ value: "Year", position: "insideBottom", offset: -5 }}
+                  />
 
+                  <YAxis
+                    domain={[0, yAxisMax]}
+                    tickFormatter={(v) => formatYAxisTick(Number(v))}
+                  />
 
-<YAxis
-  domain={[0, yAxisMax]}
-  tickFormatter={(v) => formatYAxisTick(Number(v))}
-/>
+                  <Tooltip content={<CustomInvestmentTooltip />} />
 
+                  <Legend verticalAlign="bottom" align="right" iconType="square" />
 
-
-
-<Tooltip content={<CustomInvestmentTooltip />} />
-
-
-  <Legend verticalAlign="bottom" align="right" iconType="square" />
-
-  <Area
-    type="monotone"
-    dataKey="principal"
-    name="Total principal"
-    stackId="1"
-    stroke="#1D4ED8"
-    fill="url(#principalFill)"
-    dot={false}
-    activeDot={false}
-  />
-  <Area
-    type="monotone"
-    dataKey="interest"
-    name="Total interest"
-    stackId="1"
-    stroke="#047857"
-    fill="url(#interestFill)"
-    dot={false}
-    activeDot={false}
-  />
-</AreaChart>
-
+                  <Area
+                    type="monotone"
+                    dataKey="principal"
+                    name="Total principal"
+                    stackId="1"
+                    stroke="#1D4ED8"
+                    fill="url(#principalFill)"
+                    dot={false}
+                    activeDot={false}
+                  />
+                  <Area
+                    type="monotone"
+                    dataKey="interest"
+                    name="Total interest"
+                    stackId="1"
+                    stroke="#047857"
+                    fill="url(#interestFill)"
+                    dot={false}
+                    activeDot={false}
+                  />
+                </AreaChart>
               </ResponsiveContainer>
             </div>
 
-<p className="text-xs text-gray-600">
-  <span className="font-medium">Investment assumption:</span> Assumes the annual
-  tax difference is invested monthly and compounds monthly using a 10% long-term
-  annual return assumption. Results are illustrative only and not financial
-  advice.
-</p>
+            <p className="text-xs text-gray-600">
+              <span className="font-medium">Investment assumption:</span> Assumes the annual
+              tax difference is invested monthly and compounds monthly using a 10% long-term
+              annual return assumption. Results are illustrative only and not financial
+              advice.
+            </p>
           </>
         )}
       </div>
