@@ -605,8 +605,6 @@ onBlur={() => {
             <div className="font-semibold mb-1">
               Over {totals.y} years ({totals.firstYear}–{totals.lastYear})
             </div>
-            <div>First-year wage base: {formatUSD(totals.firstCap)}</div>
-            <div>Last-year wage base: {formatUSD(totals.lastCap)}</div>
             <div className="mt-2">You pay: {formatUSD(totals.totalEmployee)}</div>
             <div>Employer pays: {formatUSD(totals.totalEmployer)}</div>
             <div className="mt-2 font-bold">Total: {formatUSD(totals.totalCombined)}</div>
