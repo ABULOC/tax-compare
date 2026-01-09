@@ -95,6 +95,15 @@ function jsonLd() {
             "It takes the annual tax difference between the two states, invests it monthly, and compounds monthly using a long-term annual return assumption (currently 10%). The projection is illustrative only and not financial advice.",
         },
       },
+{
+  "@type": "Question",
+  name: "Do state tax rules change over time?",
+  acceptedAnswer: {
+    "@type": "Answer",
+    text:
+      "Yes. State tax brackets, rates, deductions, surtaxes, and property tax rules change frequently due to new legislation and annual adjustments. This calculator uses a recent snapshot for comparison purposes, but users should always verify results with official state sources or a tax professional.",
+  },
+}, 
     ],
   };
 
@@ -284,6 +293,25 @@ export default function ComparePage() {
             return rate. It is illustrative only and not financial advice.
           </p>
         </details>
+
+<details className="rounded border p-4">
+  <summary className="font-medium cursor-pointer">
+    How accurate is this tax data over time?
+  </summary>
+  <p className="text-gray-700 mt-2">
+    State tax laws, brackets, deductions, and property tax rules change
+    frequently due to legislation, inflation adjustments, and local policy.
+    This calculator reflects a snapshot based on recent publicly available
+    information, but it may not always reflect the most current law.
+  </p>
+  <p className="text-gray-700 mt-2">
+    You should always double check results against official state tax
+    authorities or a qualified tax professional before making financial or
+    relocation decisions.
+  </p>
+</details>
+
+
       </section>
     </main>
   );
