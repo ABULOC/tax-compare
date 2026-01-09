@@ -335,19 +335,18 @@ type Props = {
 export default function SocialSecurityCalculator(props: Props) {
   const [income, setIncome] = useState(props.initialIncome ?? 100_000);
 
-  const [yearsWorked, setYearsWorked] = useState(props.initialYearsWorked ?? 35);
-  const [yearsWorkedInput, setYearsWorkedInput] = useState(
-    String(props.initialYearsWorked ?? 35),
-  );
+const [yearsWorked, setYearsWorked] = useState(props.initialYearsWorked ?? 40);
+const [yearsWorkedInput, setYearsWorkedInput] = useState(String(props.initialYearsWorked ?? 40));
 
-  const defaultStartYear =
-    props.initialStartYear ??
-    new Date().getFullYear() - (props.initialYearsWorked ?? 35);
-  const [startYear, setStartYear] = useState(defaultStartYear);
-  const [startYearInput, setStartYearInput] = useState(String(defaultStartYear));
+
+const defaultStartYear = props.initialStartYear ?? 2010;
+const [startYear, setStartYear] = useState(defaultStartYear);
+const [startYearInput, setStartYearInput] = useState(String(defaultStartYear));
+
 
   /* ADD: birth year state */
-  const [birthYear, setBirthYear] = useState(props.initialBirthYear ?? 1960);
+const [birthYear, setBirthYear] = useState(props.initialBirthYear ?? 1990);
+
 
   const annualReturn = 0.1;
   const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
