@@ -1395,7 +1395,7 @@ const monthlyContribution = annualDeltaAbs / 12;
 
 
 const investmentSeries = useMemo(() => {
-  const nYears = Math.max(1, Math.min(50, Math.floor(years)));
+  const nYears = Math.max(1, Math.min(100, Math.floor(years)));
   const startYear = new Date().getFullYear();
 
   let balance = 0;
