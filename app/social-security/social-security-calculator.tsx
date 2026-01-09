@@ -475,6 +475,10 @@ const yAxisMax = useMemo(() => {
 
 const endingBalance = portfolioSeries.endingBalanceAfterWork;
 const endingBalanceAfterRetirement = portfolioSeries.endingBalanceAfterRetirement;
+const avgEmployeePerYear = totals.totalEmployee / totals.y;
+const avgEmployerPerYear = totals.totalEmployer / totals.y;
+const avgTotalPerYear = avgEmployeePerYear + avgEmployerPerYear;
+
 
 
   // “Per year” display uses the FIRST working year cap as a representative snapshot.
@@ -490,7 +494,7 @@ const endingBalanceAfterRetirement = portfolioSeries.endingBalanceAfterRetiremen
     <section className="space-y-6">
       <div className="space-y-4">
         <label className="block">
-  <div className="font-medium">Annual income</div>
+  <div className="font-medium">Average annual income</div>
   <input
     className="mt-1 w-full rounded border px-3 py-2"
     type="text"
@@ -594,7 +598,7 @@ onBlur={() => {
   Employer pays (on average): {formatUSD(totals.totalEmployer / totals.y)}
 </div>
 
-            <div className="mt-2 font-bold">Total: {formatUSD(perYearSnapshot.total)}</div>
+            <div className="mt-2 font-bold">Total: {formatUSD(avgTotalPerYear)}</div>
           </div>
 
           <div>
