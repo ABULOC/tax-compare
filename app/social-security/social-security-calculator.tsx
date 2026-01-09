@@ -719,7 +719,7 @@ export default function SocialSecurityCalculator(props: Props) {
 
           <p className="mt-3 text-xs text-gray-600">
             This is still a simplified estimate and does not include spousal benefits, WEP/GPO,
-            earnings test timing, or exact monthly claiming rules. For precise results use SSA calculators.
+            earnings test timing, or exact monthly claiming rules.
           </p>
         </div>
 
