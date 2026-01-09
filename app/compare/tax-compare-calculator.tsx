@@ -1592,7 +1592,7 @@ const yAxisMax = useMemo(() => {
     className="mt-1 w-full rounded border px-3 py-2"
     type="number"
     min={1}
-    max={50}
+    max={100}
     value={yearsInput}
     onChange={(e) => {
       const v = e.target.value;
@@ -1604,7 +1604,7 @@ const yAxisMax = useMemo(() => {
       const n = Number(v);
       if (Number.isNaN(n)) return;
 
-      const clamped = Math.max(1, Math.min(50, Math.floor(n)));
+      const clamped = Math.max(1, Math.min(100, Math.floor(n)));
       setYears(clamped);
       setYearsInput(String(clamped));
 
