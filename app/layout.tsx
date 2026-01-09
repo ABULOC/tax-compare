@@ -8,14 +8,19 @@ const inter = Inter({
   weight: ["400", "500", "600", "700"],
 });
 
-// ADD THESE LINES: choose a stable site URL for metadataBase (best for SEO)
+// Stable base URL for metadata (canonical + OG absolute URLs)
 const siteUrl =
   process.env.NEXT_PUBLIC_SITE_URL ??
-  (process.env.VERCEL_URL ? `https://${process.env.VERCEL_URL}` : "http://localhost:3000");
+  (process.env.VERCEL_URL
+    ? `https://${process.env.VERCEL_URL}`
+    : "http://localhost:3000");
 
 export const metadata: Metadata = {
-  // ADD THIS LINE: required so canonical + OG URLs become absolute
+  // Required so canonical + OG URLs become absolute
   metadataBase: new URL(siteUrl),
+
+  // ADD THIS: site-wide canonical (homepage becomes https://truetaxcost.com/)
+  alternates: { canonical: "/" },
 
   title: {
     default:
@@ -33,7 +38,9 @@ export const metadata: Metadata = {
     type: "website",
     siteName: "True Tax Cost",
     locale: "en_US",
-    url: "/",
+
+    // CHANGE THIS: use absolute URL so og:url is emitted consistently
+    url: new URL("/", siteUrl).toString(),
   },
 
   twitter: {
