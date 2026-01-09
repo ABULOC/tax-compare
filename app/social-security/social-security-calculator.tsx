@@ -11,10 +11,9 @@ import {
   Area,
 } from "recharts";
 
-
 /**
  * Social Security OASDI "Contribution and Benefit Base" (taxable maximum) by year.
- // Source: SSA OACT (Contribution and Benefit Base, 1937–2026).
+ * Source: SSA OACT (Contribution and Benefit Base, 1937–2026).
  */
 const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   1937: 3_000,
@@ -115,37 +114,149 @@ const OASDI_WAGE_BASE_BY_YEAR: Record<number, number> = {
   2026: 184_500,
 };
 
-const MIN_WAGE_BASE_YEAR = Math.min(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number));
-const MAX_WAGE_BASE_YEAR = Math.max(...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number));
+const MIN_WAGE_BASE_YEAR = Math.min(
+  ...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number),
+);
+const MAX_WAGE_BASE_YEAR = Math.max(
+  ...Object.keys(OASDI_WAGE_BASE_BY_YEAR).map(Number),
+);
 
-// Social Security OASDI wage rate
-// Employee: 6.2%
-// Employer: 6.2%
-const EMPLOYEE_RATE = 0.062;
-const EMPLOYER_RATE = 0.062;
+/* --------------------------
+   ADD: Historical OASDI rates
+   -------------------------- */
+// OASDI tax rates vary by year (employee and employer can differ in some years).
+function getEmployeeOasdiRate(year: number) {
+  // 2011–2012 employee payroll tax reduction (employer stayed 6.2%)
+  if (year === 2011 || year === 2012) return 0.042;
 
+  if (year === 1980) return 0.0508;
+  if (year === 1981) return 0.0535;
+  if (year === 1982 || year === 1983 || year === 1984) return 0.054;
+  if (year === 1985 || year === 1986 || year === 1987) return 0.057;
+  if (year === 1988 || year === 1989) return 0.0606;
 
+  // 1990 and later (except 2011–2012 handled above)
+  return 0.062;
+}
 
-// PIA bend points (current-law formula, example year 2026). :contentReference[oaicite:2]{index=2}
-const PIA_BEND_1 = 1_286;
-const PIA_BEND_2 = 7_749;
+function getEmployerOasdiRate(year: number) {
+  if (year === 1980) return 0.0508;
+  if (year === 1981) return 0.0535;
+  if (year === 1982 || year === 1983) return 0.054;
 
-// Remaining life expectancy at age 67 (SSA 2022 period life table). :contentReference[oaicite:3]{index=3}
+  // 1984: employer 5.7%, employee 5.4% (employee credit)
+  if (year === 1984) return 0.057;
+
+  if (year === 1985 || year === 1986 || year === 1987) return 0.057;
+  if (year === 1988 || year === 1989) return 0.0606;
+
+  return 0.062;
+}
+
+/* --------------------------
+   ADD: AWI for wage indexing
+   -------------------------- */
+// National Average Wage Index (AWI) values used for wage indexing.
+// Include the years you need for your calculator range.
+const AWI_BY_YEAR: Record<number, number> = {
+  1980: 12513.46,
+  1981: 13773.1,
+  1982: 14531.34,
+  1983: 15239.24,
+  1984: 16135.07,
+  1985: 16822.51,
+  1986: 17321.82,
+  1987: 18426.51,
+  1988: 19334.04,
+  1989: 20099.55,
+  1990: 21027.98,
+  1991: 21811.6,
+  1992: 22935.42,
+  1993: 23132.67,
+  1994: 23753.53,
+  1995: 24705.66,
+  1996: 25913.9,
+  1997: 27426.0,
+  1998: 28861.44,
+  1999: 30469.84,
+  2000: 32154.82,
+  2001: 32921.92,
+  2002: 33252.09,
+  2003: 34064.95,
+  2004: 35648.55,
+  2005: 36952.94,
+  2006: 38651.41,
+  2007: 40405.48,
+  2008: 41334.97,
+  2009: 40711.61,
+  2010: 41673.83,
+  2011: 42979.61,
+  2012: 44321.67,
+  2013: 44888.16,
+  2014: 46481.52,
+  2015: 48098.63,
+  2016: 48642.15,
+  2017: 50321.89,
+  2018: 52145.8,
+  2019: 54099.99,
+  2020: 55628.6,
+  2021: 60575.07,
+  2022: 63795.13,
+  2023: 66621.8,
+  2024: 69846.57,
+};
+
+function getAWI(year: number) {
+  if (AWI_BY_YEAR[year] != null) return AWI_BY_YEAR[year];
+  const years = Object.keys(AWI_BY_YEAR)
+    .map(Number)
+    .sort((a, b) => a - b);
+  if (year < years[0]) return AWI_BY_YEAR[years[0]];
+  return AWI_BY_YEAR[years[years.length - 1]];
+}
+
+/* -------------------------------------
+   ADD: Bend points by eligibility year
+   ------------------------------------- */
+const PIA_BEND_POINTS_BY_ELIGIBILITY_YEAR: Record<
+  number,
+  { b1: number; b2: number }
+> = {
+  2020: { b1: 960, b2: 5785 },
+  2021: { b1: 996, b2: 6002 },
+  2022: { b1: 1024, b2: 6172 },
+  2023: { b1: 1115, b2: 6721 },
+  2024: { b1: 1174, b2: 7078 },
+  2025: { b1: 1226, b2: 7391 },
+  2026: { b1: 1286, b2: 7749 },
+};
+
+function getBendPoints(eligibilityYear: number) {
+  return (
+    PIA_BEND_POINTS_BY_ELIGIBILITY_YEAR[eligibilityYear] ??
+    PIA_BEND_POINTS_BY_ELIGIBILITY_YEAR[2026]
+  );
+}
+
+// Remaining life expectancy at age 67 (SSA 2022 period life table).
 // Male: 16.11, Female: 18.56. Use simple average as "average person".
 const AVG_REMAINING_YEARS_AT_67 = (16.11 + 18.56) / 2;
 
-function calcPIAFromAIME(aime: number) {
+/* -------------------------------
+   CHANGE: calcPIAFromAIME signature
+   ------------------------------- */
+function calcPIAFromAIME(aime: number, bend1: number, bend2: number) {
   const x = Math.max(0, aime);
 
-  const part1 = Math.min(x, PIA_BEND_1) * 0.9;
-  const part2 = Math.max(0, Math.min(x, PIA_BEND_2) - PIA_BEND_1) * 0.32;
-  const part3 = Math.max(0, x - PIA_BEND_2) * 0.15;
+  const part1 = Math.min(x, bend1) * 0.9;
+  const part2 = Math.max(0, Math.min(x, bend2) - bend1) * 0.32;
+  const part3 = Math.max(0, x - bend2) * 0.15;
 
-  return part1 + part2 + part3;
+  const raw = part1 + part2 + part3;
+
+  // SSA: round down to next lower multiple of $0.10
+  return Math.floor(raw * 10) / 10;
 }
-
-
-
 
 function formatUSD(n: number) {
   return new Intl.NumberFormat("en-US", {
@@ -187,60 +298,6 @@ function getWageBaseForYear(year: number) {
   return OASDI_WAGE_BASE_BY_YEAR[MAX_WAGE_BASE_YEAR];
 }
 
-function CustomSSInvestmentTooltip({
-  active,
-  label,
-  payload,
-}: {
-  active?: boolean;
-  label?: string | number;
-  payload?: Array<{ name?: string; value?: number; color?: string }>;
-}) {
-  if (!active || !payload || payload.length === 0) return null;
-
-  const principal = payload.find((p) => p.name === "Total principal")?.value ?? 0;
-  const interest = payload.find((p) => p.name === "Total interest")?.value ?? 0;
-  const balance = principal + interest;
-
-  const principalColor =
-    payload.find((p) => p.name === "Total principal")?.color ?? "#1D4ED8";
-  const interestColor =
-    payload.find((p) => p.name === "Total interest")?.color ?? "#047857";
-
-  return (
-    <div className="rounded-md border bg-white shadow-lg px-4 py-3 min-w-[260px]">
-      <div className="text-sm text-gray-600">{String(label)}</div>
-
-      <div className="my-3 h-px bg-gray-200" />
-
-      <div className="flex items-baseline justify-between">
-        <div className="font-semibold text-gray-900">Total balance</div>
-        <div className="font-semibold text-gray-900">{formatUSD(balance)}</div>
-      </div>
-
-      <div className="mt-3 space-y-2">
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-800">
-            <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: principalColor }} />
-            <span>Total principal</span>
-          </div>
-          <div className="text-gray-900">{formatUSD(principal)}</div>
-        </div>
-
-        <div className="flex items-center justify-between">
-          <div className="flex items-center gap-2 text-gray-800">
-            <span className="inline-block h-2.5 w-2.5" style={{ backgroundColor: interestColor }} />
-            <span>Total interest</span>
-          </div>
-          <div className="text-gray-900">{formatUSD(interest)}</div>
-        </div>
-      </div>
-    </div>
-  );
-}
-
-
-
 function CustomPortfolioTooltip({
   active,
   label,
@@ -266,25 +323,31 @@ function CustomPortfolioTooltip({
   );
 }
 
-
-
-
-
 type Props = {
   initialIncome?: number;
   initialYearsWorked?: number;
   initialStartYear?: number;
+
+  /* ADD: birth year prop */
+  initialBirthYear?: number;
 };
 
 export default function SocialSecurityCalculator(props: Props) {
   const [income, setIncome] = useState(props.initialIncome ?? 100_000);
 
   const [yearsWorked, setYearsWorked] = useState(props.initialYearsWorked ?? 35);
-  const [yearsWorkedInput, setYearsWorkedInput] = useState(String(props.initialYearsWorked ?? 35));
+  const [yearsWorkedInput, setYearsWorkedInput] = useState(
+    String(props.initialYearsWorked ?? 35),
+  );
 
-  const defaultStartYear = props.initialStartYear ?? new Date().getFullYear() - (props.initialYearsWorked ?? 35);
+  const defaultStartYear =
+    props.initialStartYear ??
+    new Date().getFullYear() - (props.initialYearsWorked ?? 35);
   const [startYear, setStartYear] = useState(defaultStartYear);
   const [startYearInput, setStartYearInput] = useState(String(defaultStartYear));
+
+  /* ADD: birth year state */
+  const [birthYear, setBirthYear] = useState(props.initialBirthYear ?? 1960);
 
   const annualReturn = 0.1;
   const monthlyReturn = Math.pow(1 + annualReturn, 1 / 12) - 1;
@@ -304,8 +367,9 @@ export default function SocialSecurityCalculator(props: Props) {
       const cap = getWageBaseForYear(year);
       const taxableWages = Math.min(income, cap);
 
-      totalEmployee += taxableWages * EMPLOYEE_RATE;
-      totalEmployer += taxableWages * EMPLOYER_RATE;
+      /* CHANGE: use historical rates */
+      totalEmployee += taxableWages * getEmployeeOasdiRate(year);
+      totalEmployer += taxableWages * getEmployerOasdiRate(year);
     }
 
     return {
@@ -320,173 +384,183 @@ export default function SocialSecurityCalculator(props: Props) {
     };
   }, [income, workingYears.start, workingYears.years]);
 
-
-
   const benefitEstimate = useMemo(() => {
-  // Build covered earnings per year (income capped by wage base for each working year)
-  const covered: number[] = [];
+    const yearTurn60 = birthYear + 60;
+    const eligibilityYear = birthYear + 62;
+    const claimYear = birthYear + 67;
 
-  for (let i = 0; i < workingYears.years; i += 1) {
-    const year = workingYears.start + i;
-    const cap = getWageBaseForYear(year);
-    covered.push(Math.min(income, cap));
-  }
+    const { b1, b2 } = getBendPoints(eligibilityYear);
 
-  // Social Security uses 35 years of earnings (with zeros if fewer).
-  const top35 = covered
-    .slice()
-    .sort((a, b) => b - a)
-    .slice(0, 35);
+    // Build indexed earnings (capped by wage base each year, then wage-indexed to yearTurn60).
+    const indexed: number[] = [];
 
-  const sumTop35 = top35.reduce((s, v) => s + v, 0);
+    for (let i = 0; i < workingYears.years; i += 1) {
+      const year = workingYears.start + i;
+      const cap = getWageBaseForYear(year);
+      const covered = Math.min(income, cap);
 
-  // AIME is average monthly earnings over 35 years = sum / 420 months
-  const aime = sumTop35 / (35 * 12);
-
-  // PIA (Primary Insurance Amount). For this simplified model, assume benefit at 67 equals PIA.
-  const pia = calcPIAFromAIME(aime);
-
-  // Approx lifetime benefits using "average person" remaining years at 67.
-  const totalLifetime = pia * 12 * AVG_REMAINING_YEARS_AT_67;
-
-  return {
-    aime,
-    piaMonthlyAt67: pia,
-    expectedYearsPaid: AVG_REMAINING_YEARS_AT_67,
-    totalLifetime,
-  };
-}, [income, workingYears.start, workingYears.years]);
-
-
-
-
-const portfolioSeries = useMemo(() => {
-  const y = workingYears.years;
-  const start = workingYears.start;
-
-  const startYearCalendar = new Date().getFullYear();
-
-  // Retirement withdrawal duration (17.3 years) in months
-  const retirementMonths = Math.round(AVG_REMAINING_YEARS_AT_67 * 12);
-
-  // Monthly withdrawal equals estimated SS monthly benefit at 67
-  const monthlyWithdrawal = benefitEstimate.piaMonthlyAt67;
-
-  let balance = 0;
-
-  const points: { year: number; yearLabel: string; balance: number }[] = [
-    { year: startYearCalendar, yearLabel: "Now", balance: 0 },
-  ];
-
-  // ---- Accumulation phase (working years) ----
-  for (let i = 0; i < y; i += 1) {
-    const workYear = start + i;
-    const cap = getWageBaseForYear(workYear);
-    const taxableWages = Math.min(income, cap);
-
-    const annualEmployee = taxableWages * EMPLOYEE_RATE;
-    const annualEmployer = taxableWages * EMPLOYER_RATE;
-    const annualTotal = annualEmployee + annualEmployer;
-
-    const monthlyContribution = annualTotal / 12;
-
-    for (let m = 1; m <= 12; m += 1) {
-      balance = balance * (1 + monthlyReturn) + monthlyContribution;
+      const factor = year < yearTurn60 ? getAWI(yearTurn60) / getAWI(year) : 1;
+      indexed.push(covered * factor);
     }
 
-    const calendarYear = startYearCalendar + (i + 1);
-    points.push({
-      year: calendarYear,
-      yearLabel: String(calendarYear),
-      balance,
-    });
-  }
+    // Highest 35 years, then AIME is sum / 420 months.
+    const top35 = indexed.slice().sort((a, b) => b - a).slice(0, 35);
+    const sumTop35 = top35.reduce((s, v) => s + v, 0);
 
-  // ---- Withdrawal phase (next 17.3 years) ----
-  // Start withdrawals the month after the last contribution month.
-  let monthsSustained = 0;
+    // SSA: AIME rounded down to next lower dollar
+    const aime = Math.floor(sumTop35 / 420);
 
-  for (let monthIndex = 1; monthIndex <= retirementMonths; monthIndex += 1) {
-    balance = balance * (1 + monthlyReturn) - monthlyWithdrawal;
+    // PIA at eligibility bend points, rounded down to $0.10 inside function
+    const piaAtEligibility = calcPIAFromAIME(aime, b1, b2);
 
-    if (balance <= 0) {
-      balance = 0;
-      monthsSustained = monthIndex;
-      // Push an endpoint point at the year boundary if desired, but always end the series
-      // at the year containing exhaustion.
-      break;
+    // Optional: COLAs from eligibility to claiming year.
+    // This table is partial. If claimYear goes beyond what's listed, it will stop applying.
+    const COLA_BY_JAN_YEAR: Record<number, number> = {
+      2022: 0.059,
+      2023: 0.087,
+      2024: 0.032,
+      2025: 0.025,
+      2026: 0.028,
+    };
+
+    let colaFactor = 1;
+    for (let y = eligibilityYear + 1; y <= claimYear; y += 1) {
+      const cola = COLA_BY_JAN_YEAR[y];
+      if (cola != null) colaFactor *= 1 + cola;
     }
 
-    monthsSustained = monthIndex;
+    // Re-round to $0.10 after COLA factor
+    const piaMonthlyAt67 = Math.floor(piaAtEligibility * colaFactor * 10) / 10;
 
-    // Add a point once per year during retirement to keep the chart readable
-    if (monthIndex % 12 === 0) {
-      const yearsIntoRetirement = monthIndex / 12;
-      const calendarYear = startYearCalendar + y + yearsIntoRetirement;
+    const totalLifetime = piaMonthlyAt67 * 12 * AVG_REMAINING_YEARS_AT_67;
+
+    return {
+      aime,
+      piaMonthlyAt67,
+      expectedYearsPaid: AVG_REMAINING_YEARS_AT_67,
+      totalLifetime,
+      eligibilityYear,
+      yearTurn60,
+      claimYear,
+    };
+  }, [income, workingYears.start, workingYears.years, birthYear]);
+
+  const portfolioSeries = useMemo(() => {
+    const y = workingYears.years;
+    const start = workingYears.start;
+
+    const startYearCalendar = new Date().getFullYear();
+
+    const retirementMonths = Math.round(AVG_REMAINING_YEARS_AT_67 * 12);
+
+    const monthlyWithdrawal = benefitEstimate.piaMonthlyAt67;
+
+    let balance = 0;
+
+    const points: { year: number; yearLabel: string; balance: number }[] = [
+      { year: startYearCalendar, yearLabel: "Now", balance: 0 },
+    ];
+
+    // Accumulation phase (working years)
+    for (let i = 0; i < y; i += 1) {
+      const workYear = start + i;
+      const cap = getWageBaseForYear(workYear);
+      const taxableWages = Math.min(income, cap);
+
+      /* CHANGE: use historical rates */
+      const annualEmployee = taxableWages * getEmployeeOasdiRate(workYear);
+      const annualEmployer = taxableWages * getEmployerOasdiRate(workYear);
+      const annualTotal = annualEmployee + annualEmployer;
+
+      const monthlyContribution = annualTotal / 12;
+
+      for (let m = 1; m <= 12; m += 1) {
+        balance = balance * (1 + monthlyReturn) + monthlyContribution;
+      }
+
+      const calendarYear = startYearCalendar + (i + 1);
       points.push({
         year: calendarYear,
         yearLabel: String(calendarYear),
         balance,
       });
     }
-  }
 
-  // Ensure we include the final retirement year point if the portfolio lasted the whole period
-  if (monthsSustained === retirementMonths) {
-    const finalCalendarYear = startYearCalendar + y + Math.ceil(retirementMonths / 12);
-    const alreadyHasFinal = points.some((p) => p.year === finalCalendarYear);
-    if (!alreadyHasFinal) {
-      points.push({
-        year: finalCalendarYear,
-        yearLabel: String(finalCalendarYear),
-        balance,
-      });
+    // Withdrawal phase
+    let monthsSustained = 0;
+
+    for (let monthIndex = 1; monthIndex <= retirementMonths; monthIndex += 1) {
+      balance = balance * (1 + monthlyReturn) - monthlyWithdrawal;
+
+      if (balance <= 0) {
+        balance = 0;
+        monthsSustained = monthIndex;
+        break;
+      }
+
+      monthsSustained = monthIndex;
+
+      if (monthIndex % 12 === 0) {
+        const yearsIntoRetirement = monthIndex / 12;
+        const calendarYear = startYearCalendar + y + yearsIntoRetirement;
+        points.push({
+          year: calendarYear,
+          yearLabel: String(calendarYear),
+          balance,
+        });
+      }
     }
-  }
 
-  return {
-    points,
-    monthlyWithdrawal,
-    monthsSustained,
-    retirementMonths,
-    endingBalanceAfterWork: points[y]?.balance ?? 0,
-    endingBalanceAfterRetirement: points[points.length - 1]?.balance ?? 0,
-  };
-}, [income, monthlyReturn, workingYears.start, workingYears.years, benefitEstimate.piaMonthlyAt67]);
+    if (monthsSustained === retirementMonths) {
+      const finalCalendarYear = startYearCalendar + y + Math.ceil(retirementMonths / 12);
+      const alreadyHasFinal = points.some((p) => p.year === finalCalendarYear);
+      if (!alreadyHasFinal) {
+        points.push({
+          year: finalCalendarYear,
+          yearLabel: String(finalCalendarYear),
+          balance,
+        });
+      }
+    }
 
+    return {
+      points,
+      monthlyWithdrawal,
+      monthsSustained,
+      retirementMonths,
+      endingBalanceAfterWork: points[y]?.balance ?? 0,
+      endingBalanceAfterRetirement: points[points.length - 1]?.balance ?? 0,
+    };
+  }, [income, monthlyReturn, workingYears.start, workingYears.years, benefitEstimate.piaMonthlyAt67]);
 
+  const xTicks = useMemo(() => {
+    const first = portfolioSeries.points[0]?.year;
+    const last = portfolioSeries.points[portfolioSeries.points.length - 1]?.year;
+    if (first == null || last == null) return [];
+    const mid = first + Math.floor((last - first) / 2);
+    return [first, mid, last];
+  }, [portfolioSeries.points]);
 
+  const yAxisMax = useMemo(() => {
+    const max = Math.max(...portfolioSeries.points.map((p) => p.balance));
+    return max * 1.1;
+  }, [portfolioSeries.points]);
 
-
-const xTicks = useMemo(() => {
-  const first = portfolioSeries.points[0]?.year;
-  const last = portfolioSeries.points[portfolioSeries.points.length - 1]?.year;
-  if (first == null || last == null) return [];
-  const mid = first + Math.floor((last - first) / 2);
-  return [first, mid, last];
-}, [portfolioSeries.points]);
-
-
-const yAxisMax = useMemo(() => {
-  const max = Math.max(...portfolioSeries.points.map((p) => p.balance));
-  return max * 1.1;
-}, [portfolioSeries.points]);
-
-
-const endingBalance = portfolioSeries.endingBalanceAfterWork;
-const endingBalanceAfterRetirement = portfolioSeries.endingBalanceAfterRetirement;
-const avgEmployeePerYear = totals.totalEmployee / totals.y;
-const avgEmployerPerYear = totals.totalEmployer / totals.y;
-const avgTotalPerYear = avgEmployeePerYear + avgEmployerPerYear;
-
-
+  const endingBalance = portfolioSeries.endingBalanceAfterWork;
+  const endingBalanceAfterRetirement = portfolioSeries.endingBalanceAfterRetirement;
+  const avgEmployeePerYear = totals.totalEmployee / totals.y;
+  const avgEmployerPerYear = totals.totalEmployer / totals.y;
+  const avgTotalPerYear = avgEmployeePerYear + avgEmployerPerYear;
 
   // “Per year” display uses the FIRST working year cap as a representative snapshot.
   const perYearSnapshot = useMemo(() => {
     const cap = getWageBaseForYear(workingYears.start);
     const taxableWages = Math.min(income, cap);
-    const employee = taxableWages * EMPLOYEE_RATE;
-    const employer = taxableWages * EMPLOYER_RATE;
+
+    /* CHANGE: use historical rates */
+    const employee = taxableWages * getEmployeeOasdiRate(workingYears.start);
+    const employer = taxableWages * getEmployerOasdiRate(workingYears.start);
+
     return { cap, taxableWages, employee, employer, total: employee + employer };
   }, [income, workingYears.start]);
 
@@ -494,16 +568,28 @@ const avgTotalPerYear = avgEmployeePerYear + avgEmployerPerYear;
     <section className="space-y-6">
       <div className="space-y-4">
         <label className="block">
-  <div className="font-medium">Average annual income</div>
-  <input
-    className="mt-1 w-full rounded border px-3 py-2"
-    type="text"
-    inputMode="numeric"
-    value={`$${formatNumberInput(income)}`}
-    onChange={(e) => setIncome(parseNumberInput(e.target.value))}
-  />
-</label>
+          <div className="font-medium">Average annual income</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="text"
+            inputMode="numeric"
+            value={`$${formatNumberInput(income)}`}
+            onChange={(e) => setIncome(parseNumberInput(e.target.value))}
+          />
+        </label>
 
+        {/* ADD: Birth year input */}
+        <label className="block">
+          <div className="font-medium">Birth year</div>
+          <input
+            className="mt-1 w-full rounded border px-3 py-2"
+            type="number"
+            min={1900}
+            max={2100}
+            value={birthYear}
+            onChange={(e) => setBirthYear(Number(e.target.value))}
+          />
+        </label>
 
         <label className="block">
           <div className="font-medium">Year you started working</div>
@@ -513,52 +599,45 @@ const avgTotalPerYear = avgEmployeePerYear + avgEmployerPerYear;
             min={1900}
             max={2100}
             value={startYearInput}
-onChange={(e) => {
-  const v = e.target.value;
-  setStartYearInput(v);
+            onChange={(e) => {
+              const v = e.target.value;
+              setStartYearInput(v);
 
-  // Allow clearing while typing
-  if (v === "") return;
+              if (v === "") return;
+              if (!/^\d{1,4}$/.test(v)) return;
+              if (v.length < 4) return;
 
-  // Allow partial typing like "2", "20", "202"
-  if (!/^\d{1,4}$/.test(v)) return;
+              const n = Number(v);
+              if (Number.isNaN(n)) return;
 
-  // Only commit to state once it looks like a full year
-  if (v.length < 4) return;
+              const clamped = Math.max(1900, Math.min(2100, n));
+              setStartYear(clamped);
 
-  const n = Number(v);
-  if (Number.isNaN(n)) return;
+              if (clamped !== n) setStartYearInput(String(clamped));
+            }}
+            onBlur={() => {
+              if (startYearInput === "") {
+                setStartYearInput(String(startYear));
+                return;
+              }
 
-  const clamped = Math.max(1900, Math.min(2100, n));
-  setStartYear(clamped);
+              if (!/^\d{4}$/.test(startYearInput)) {
+                setStartYearInput(String(startYear));
+                return;
+              }
 
-  // Normalize displayed value if clamped
-  if (clamped !== n) setStartYearInput(String(clamped));
-}}
-onBlur={() => {
-  // If they leave it blank, snap back to last valid
-  if (startYearInput === "") {
-    setStartYearInput(String(startYear));
-    return;
-  }
-
-  // If they leave a partial year (like "202"), snap back
-  if (!/^\d{4}$/.test(startYearInput)) {
-    setStartYearInput(String(startYear));
-    return;
-  }
-
-  const n = Number(startYearInput);
-  const clamped = Math.max(1900, Math.min(2100, n));
-  setStartYear(clamped);
-  setStartYearInput(String(clamped));
-}}
-
+              const n = Number(startYearInput);
+              const clamped = Math.max(1900, Math.min(2100, n));
+              setStartYear(clamped);
+              setStartYearInput(String(clamped));
+            }}
           />
         </label>
 
         <label className="block">
-          <div className="font-medium">Total years worked (Or that you plan on working)</div>
+          <div className="font-medium">
+            Total years worked (Or that you plan on working)
+          </div>
           <input
             className="mt-1 w-full rounded border px-3 py-2"
             type="number"
@@ -591,14 +670,16 @@ onBlur={() => {
         <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
           <div>
             <div className="font-semibold mb-1">Per year</div>
-<div className="mt-2">
-  You pay (on average): {formatUSD(totals.totalEmployee / totals.y)}
-</div>
-<div>
-  Employer pays (on average): {formatUSD(totals.totalEmployer / totals.y)}
-</div>
-
+            <div className="mt-2">You pay (on average): {formatUSD(totals.totalEmployee / totals.y)}</div>
+            <div>Employer pays (on average): {formatUSD(totals.totalEmployer / totals.y)}</div>
             <div className="mt-2 font-bold">Total: {formatUSD(avgTotalPerYear)}</div>
+
+            {/* Optional debug snapshot */}
+            <div className="mt-3 text-xs text-gray-600">
+              Snapshot (first year {workingYears.start}):
+              {" "}
+              cap {formatUSD(perYearSnapshot.cap)}, taxable {formatUSD(perYearSnapshot.taxableWages)}
+            </div>
           </div>
 
           <div>
@@ -611,142 +692,120 @@ onBlur={() => {
           </div>
         </div>
 
+        <div className="pt-4 border-t">
+          <h3 className="text-lg font-semibold">Estimated Social Security benefit at age 67</h3>
 
-<div className="pt-4 border-t">
-  <h3 className="text-lg font-semibold">
-    Estimated Social Security benefit at age 67
-  </h3>
+          <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <div className="text-sm text-gray-600">Estimated monthly benefit (at 67)</div>
+              <div className="text-2xl font-bold">
+                {formatUSD(benefitEstimate.piaMonthlyAt67)}
+                <span className="text-sm font-normal text-gray-600"> / month</span>
+              </div>
+              <div className="mt-1 text-xs text-gray-600">
+                Uses wage indexing to year you turn 60 and bend points for eligibility year (age 62),
+                then applies listed COLAs through age 67 when available.
+              </div>
+            </div>
 
-  <div className="mt-2 grid grid-cols-1 gap-4 sm:grid-cols-2">
-    <div>
-      <div className="text-sm text-gray-600">
-        Estimated monthly benefit (at 67)
-      </div>
-      <div className="text-2xl font-bold">
-        {formatUSD(benefitEstimate.piaMonthlyAt67)}
-        <span className="text-sm font-normal text-gray-600"> / month</span>
-      </div>
-      <div className="mt-1 text-xs text-gray-600">
-        Based on a simplified AIME → PIA estimate.
-      </div>
-    </div>
+            <div>
+              <div className="text-sm text-gray-600">Estimated total paid over an average lifespan</div>
+              <div className="text-2xl font-bold">{formatUSD(benefitEstimate.totalLifetime)}</div>
+              <div className="mt-1 text-xs text-gray-600">
+                Assumes you begin taking payments at 67 and live to be 84.
+              </div>
+            </div>
+          </div>
 
-    <div>
-      <div className="text-sm text-gray-600">
-        Estimated total paid over an average lifespan
-      </div>
-      <div className="text-2xl font-bold">
-        {formatUSD(benefitEstimate.totalLifetime)}
-      </div>
-      <div className="mt-1 text-xs text-gray-600">
-        Assumes you begin taking payments at 67 and live to be 84.
-      </div>
-    </div>
-  </div>
+          <p className="mt-3 text-xs text-gray-600">
+            This is still a simplified estimate and does not include spousal benefits, WEP/GPO,
+            earnings test timing, or exact monthly claiming rules. For precise results use SSA calculators.
+          </p>
+        </div>
 
-<p className="mt-3 text-xs text-gray-600">
-  This is a simplified estimate that ignores wage indexing, COLAs, spousal
-  benefits, and other rules. Bend points and life expectancy are based on SSA
-  published references.
-</p>
+        <div className="pt-4 border-t space-y-2">
+          <h3 className="text-lg font-semibold">If those contributions were instead invested at 10%</h3>
 
-</div>
+          <div className="text-center">
+            <div className="text-sm text-gray-600">
+              Estimated value after {totals.y} years:
+            </div>
 
+            <div className="text-3xl font-extrabold text-emerald-700">
+              {formatUSD(endingBalance)}
+            </div>
 
+            <div className="my-4 h-px bg-gray-200" />
 
+            <div className="text-lg font-semibold">
+              And if you continued investing while pulling out the same amount Social Security pays you,
+              then you would have:
+            </div>
 
-<div className="pt-4 border-t space-y-2">
-  <h3 className="text-lg font-semibold">
-    If those contributions were instead invested at 10%
-  </h3>
+            <div className="mt-1 text-3xl font-extrabold text-emerald-700">
+              {formatUSD(endingBalanceAfterRetirement)}
+            </div>
 
-  <div className="text-center">
-    <div className="text-sm text-gray-600">
-      Estimated value after {totals.y} years:
-    </div>
+            <div className="mt-1 text-xs text-gray-600">
+              Assumes you begin taking payments at 67 and live to be 84.
+            </div>
+          </div>
 
-    <div className="text-3xl font-extrabold text-emerald-700">
-      {formatUSD(endingBalance)}
-    </div>
+          <div className="w-full max-w-2xl aspect-[6/5] mx-auto mt-4">
+            <ResponsiveContainer width="100%" height="100%">
+              <AreaChart data={portfolioSeries.points} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
+                <defs>
+                  <linearGradient id="portfolioBalanceFill" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
+                    <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
+                  </linearGradient>
+                </defs>
 
+                <CartesianGrid strokeDasharray="3 3" vertical={false} />
 
-<div className="my-4 h-px bg-gray-200" />
+                <XAxis
+                  dataKey="year"
+                  ticks={xTicks}
+                  interval={0}
+                  tickFormatter={(v) => {
+                    const first = xTicks[0];
+                    if (first != null && Number(v) === first) return "Now";
+                    return String(v);
+                  }}
+                  label={{ value: "Year", position: "insideBottom", offset: -5 }}
+                />
 
-<div className="text-lg font-semibold">
-  And if you continued investing while pulling out the same amount Social Security pays you,
-  then you would have:
-</div>
+                <YAxis domain={[0, yAxisMax]} tickFormatter={(v) => formatYAxisTick(Number(v))} />
 
+                <Tooltip
+                  content={<CustomPortfolioTooltip />}
+                  labelFormatter={(value) => {
+                    const first = xTicks[0];
+                    if (first != null && Number(value) === first) return "Now";
+                    return `Year ${value}`;
+                  }}
+                />
 
-<div className="mt-1 text-3xl font-extrabold text-emerald-700">
-  {formatUSD(endingBalanceAfterRetirement)}
-</div>
+                <Area
+                  type="monotone"
+                  dataKey="balance"
+                  name="Portfolio balance"
+                  stroke="#047857"
+                  fill="url(#portfolioBalanceFill)"
+                  dot={false}
+                  activeDot={false}
+                />
+              </AreaChart>
+            </ResponsiveContainer>
+          </div>
 
-<div className="mt-1 text-xs text-gray-600">
-  Assumes you begin taking payments at 67 and live to be 84.
-</div>
-
-
-  </div>
-
-  {/* Portfolio growth during work years + drawdown during retirement */}
-  <div className="w-full max-w-2xl aspect-[6/5] mx-auto mt-4">
-    <ResponsiveContainer width="100%" height="100%">
-      <AreaChart data={portfolioSeries.points} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-        <defs>
-          <linearGradient id="portfolioBalanceFill" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#047857" stopOpacity={0.25} />
-            <stop offset="100%" stopColor="#047857" stopOpacity={0.03} />
-          </linearGradient>
-        </defs>
-
-        <CartesianGrid strokeDasharray="3 3" vertical={false} />
-
-        <XAxis
-          dataKey="year"
-          ticks={xTicks}
-          interval={0}
-          tickFormatter={(v) => {
-            const first = xTicks[0];
-            if (first != null && Number(v) === first) return "Now";
-            return String(v);
-          }}
-          label={{ value: "Year", position: "insideBottom", offset: -5 }}
-        />
-
-        <YAxis domain={[0, yAxisMax]} tickFormatter={(v) => formatYAxisTick(Number(v))} />
-
-        <Tooltip
-          content={<CustomPortfolioTooltip />}
-          labelFormatter={(value) => {
-            const first = xTicks[0];
-            if (first != null && Number(value) === first) return "Now";
-            return `Year ${value}`;
-          }}
-        />
-
-        <Area
-          type="monotone"
-          dataKey="balance"
-          name="Portfolio balance"
-          stroke="#047857"
-          fill="url(#portfolioBalanceFill)"
-          dot={false}
-          activeDot={false}
-        />
-      </AreaChart>
-    </ResponsiveContainer>
-  </div>
-
-  <p className="text-xs text-gray-600">
-    <span className="font-medium">Investment assumption:</span> Assumes the combined employee and employer
-    OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
-    assumption. Results are illustrative only and not financial advice.
-  </p>
-</div>
-
+          <p className="text-xs text-gray-600">
+            <span className="font-medium">Investment assumption:</span> Assumes the combined employee and employer
+            OASDI contributions are invested monthly and compound monthly using a 10% long-term annual return
+            assumption. Results are illustrative only and not financial advice.
+          </p>
+        </div>
       </div>
     </section>
-
   );
 }
