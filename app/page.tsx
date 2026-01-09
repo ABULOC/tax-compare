@@ -16,6 +16,7 @@ openGraph: {
   url: "/",
 },
 
+
   twitter: {
     card: "summary",
     title:
